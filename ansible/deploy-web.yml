@@ -1,0 +1,170 @@
+---
+- name: Deploy Web Container with Nginx
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    container_id: 30000
+    container_name: "web-nuit-info"
+    container_memory: 512
+    container_cores: 1
+    container_disk: 8
+    container_ip: "10.0.0.20/24"
+    container_gateway: "10.0.0.254"
+    container_dns: "1.1.1.1"
+    github_repo: "https://raw.githubusercontent.com/Bros-Insanity/nuit-info-2025/formulaire/test.html"
+
+  tasks:
+    # --- Suppression du container existant si present ---
+    - name: Check if container exists
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/lxc/{{ container_id }}/status/current"
+        method: GET
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
+        validate_certs: no
+        status_code: [200, 500]
+      register: container_check
+      ignore_errors: yes
+
+    - name: Stop existing container
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/lxc/{{ container_id }}/status/stop"
+        method: POST
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
+        validate_certs: no
+        status_code: [200, 202, 500]
+      when: container_check.status == 200
+      ignore_errors: yes
+
+    - name: Wait for container to stop
+      pause:
+        seconds: 5
+      when: container_check.status == 200
+
+    - name: Delete existing container
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/lxc/{{ container_id }}"
+        method: DELETE
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
+        validate_certs: no
+        status_code: [200, 202, 500]
+      when: container_check.status == 200
+      ignore_errors: yes
+
+    - name: Wait for container deletion
+      pause:
+        seconds: 5
+      when: container_check.status == 200
+
+    # --- Recuperation du template ---
+    - name: Get current templates on storage
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/storage/local/content"
+        method: GET
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
+        validate_certs: no
+      register: current_templates
+
+    - name: Find existing Debian template
+      set_fact:
+        existing_template: "{{ current_templates.json.data | selectattr('volid', 'search', 'debian-12') | first }}"
+
+    # --- Creation du container avec IP fixe ---
+    - name: Create LXC container with static IP
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/lxc"
+        method: POST
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
+        body_format: form-urlencoded
+        body:
+          vmid: "{{ container_id }}"
+          hostname: "{{ container_name }}"
+          ostemplate: "{{ existing_template.volid }}"
+          storage: "data"
+          memory: "{{ container_memory }}"
+          cores: "{{ container_cores }}"
+          rootfs: "data:{{ container_disk }}"
+          net0: "name=eth0,bridge=vmbr0,ip={{ container_ip }},gw={{ container_gateway }}"
+          nameserver: "{{ container_dns }}"
+          unprivileged: 1
+          start: 1
+        validate_certs: no
+        status_code: [200, 202]
+      register: create_result
+
+    - name: Wait for container to start
+      pause:
+        seconds: 15
+
+    # --- Installation de nginx et deploiement ---
+    - name: Execute commands in container - Update packages
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/lxc/{{ container_id }}/exec"
+        method: POST
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
+        body_format: json
+        body:
+          command: ["apt-get", "update"]
+        validate_certs: no
+        status_code: [200, 202, 500]
+      register: exec_update
+      ignore_errors: yes
+
+    - name: Execute commands in container - Install nginx and curl
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/lxc/{{ container_id }}/exec"
+        method: POST
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
+        body_format: json
+        body:
+          command: ["apt-get", "install", "-y", "nginx", "curl"]
+        validate_certs: no
+        status_code: [200, 202, 500]
+      register: exec_install
+      ignore_errors: yes
+
+    - name: Execute commands in container - Download test.html
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/lxc/{{ container_id }}/exec"
+        method: POST
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
+        body_format: json
+        body:
+          command: ["curl", "-o", "/var/www/html/index.html", "{{ github_repo }}"]
+        validate_certs: no
+        status_code: [200, 202, 500]
+      register: exec_download
+      ignore_errors: yes
+
+    - name: Execute commands in container - Start nginx
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/lxc/{{ container_id }}/exec"
+        method: POST
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
+        body_format: json
+        body:
+          command: ["systemctl", "enable", "--now", "nginx"]
+        validate_certs: no
+        status_code: [200, 202, 500]
+      register: exec_nginx
+      ignore_errors: yes
+
+    - name: Show result
+      debug:
+        msg: |
+          Container {{ container_id }} ({{ container_name }}) deploye!
+          IP: {{ container_ip }}
+          Gateway: {{ container_gateway }}
+          DNS: {{ container_dns }}
+          Web: http://10.0.0.20/
+
