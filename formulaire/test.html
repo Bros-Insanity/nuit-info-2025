@@ -127,7 +127,7 @@
 <h2>Blason</h2>
   <div id="blason"></div>
   <p id="blasonDesc"></p>
-  <button id="generate">Générer un blason</button>
+  <button type="button" id="generate">Générer un blason</button>
 
 <hr>
 <button type="submit">Envoyer</button>
@@ -1522,8 +1522,22 @@ updateDays();
       container.innerHTML = "";
       container.appendChild(svg);
 
-      document.getElementById("blasonDesc").textContent =
-        `Field: ${blazon.field}, Tinctures: ${blazon.t1} & ${blazon.t2}, Charge: ${blazon.charge}`;
+		const traductionField = {
+		  'plain': 'plein',
+		  'per pale': 'coupé verticalement',
+		  'per fess': 'coupé horizontalement'
+		};
+		const traductionTinctures = {
+		  argent: 'argent', or: 'or', gules: 'gueules', azure: 'azur',
+		  vert: 'sinople', sable: 'sable', purpure: 'pourpre'
+		};
+		const traductionCharges = {
+		  circle: 'rond', cross: 'croix', star: 'étoile', diamond: 'losange'
+		};
+
+		document.getElementById("blasonDesc").textContent =
+		  `Champ : ${traductionField[blazon.field]}, Émaux : ${traductionTinctures[blazon.t1]} & ${traductionTinctures[blazon.t2]}, Figure : ${traductionCharges[blazon.charge]}`;
+
     }
 
     document.getElementById("generate").onclick = () => {
