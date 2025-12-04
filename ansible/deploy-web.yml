@@ -60,7 +60,7 @@
         seconds: 5
       when: container_check.status == 200
 
-    # --- Recuperation du template ---
+    # --- Telechargement du template Debian standard ---
     - name: Get current templates on storage
       uri:
         url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/storage/local/content"
@@ -70,9 +70,35 @@
         validate_certs: no
       register: current_templates
 
-    - name: Find existing Debian template
+    - name: Check if Debian standard template exists
       set_fact:
-        existing_template: "{{ current_templates.json.data | selectattr('volid', 'search', 'debian-12') | first }}"
+        debian_standard_exists: "{{ current_templates.json.data | selectattr('volid', 'search', 'debian-12-standard') | list | length > 0 }}"
+
+    - name: Download Debian 12 standard template
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/storage/local/download-url"
+        method: POST
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
+        body_format: form-urlencoded
+        body:
+          url: "http://download.proxmox.com/images/system/debian-12-standard_12.7-1_amd64.tar.zst"
+          content: "vztmpl"
+          filename: "debian-12-standard_12.7-1_amd64.tar.zst"
+        validate_certs: no
+        status_code: [200, 202]
+      register: download_template
+      when: not debian_standard_exists
+
+    - name: Wait for template download
+      pause:
+        seconds: 30
+      when: not debian_standard_exists
+
+    - name: Set template to use
+      set_fact:
+        existing_template:
+          volid: "local:vztmpl/debian-12-standard_12.7-1_amd64.tar.zst"
 
     # --- Creation du container avec IP fixe ---
     - name: Create LXC container with static IP
