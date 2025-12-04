@@ -57,6 +57,23 @@
         seconds: 30
       when: download_result is changed
 
+    - name: Get current templates on storage
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/storage/local/content"
+        method: GET
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
+        validate_certs: no
+      register: current_templates
+
+    - name: Find existing Debian template
+      set_fact:
+        existing_template: "{{ current_templates.json.data | selectattr('volid', 'search', 'debian-12') | first }}"
+
+    - name: Show template to use
+      debug:
+        msg: "Using template: {{ existing_template.volid }}"
+
     - name: Create LXC container
       uri:
         url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/lxc"
@@ -67,7 +84,7 @@
         body:
           vmid: "{{ container_id }}"
           hostname: "{{ container_name }}"
-          ostemplate: "local:vztmpl/debian-12-standard_12.7-1_amd64.tar.zst"
+          ostemplate: "{{ existing_template.volid }}"
           storage: "data"
           memory: "{{ container_memory }}"
           cores: "{{ container_cores }}"
