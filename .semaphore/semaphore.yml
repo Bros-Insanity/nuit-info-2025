@@ -1,0 +1,16 @@
+version: v1.0
+name: Nuit Info 2025 CI
+agent:
+  machine:
+    type: e1-standard-2
+    os_image: ubuntu2004
+
+blocks:
+  - name: Docker Hello World
+    task:
+      jobs:
+        - name: Run Hello World Container
+          commands:
+            - checkout
+            - docker run hello-world
+
