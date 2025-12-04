@@ -1,0 +1,43 @@
+---
+- name: Test Proxmox API Connection
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    proxmox_api_host: "{{ proxmox_api_host }}"
+    proxmox_api_user: "{{ proxmox_api_user }}"
+    proxmox_api_token_secret: "{{ proxmox_api_token_secret }}"
+
+  tasks:
+    - name: Install proxmoxer Python library
+      pip:
+        name: proxmoxer
+        state: present
+
+    - name: Get Proxmox cluster status
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/cluster/status"
+        method: GET
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
+        validate_certs: no
+      register: cluster_status
+
+    - name: Show cluster status
+      debug:
+        var: cluster_status.json
+
+    - name: Get nodes list
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes"
+        method: GET
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
+        validate_certs: no
+      register: nodes_list
+
+    - name: Show available nodes
+      debug:
+        msg: "Nodes disponibles: {{ nodes_list.json.data | map(attribute='node') | list }}"
+
