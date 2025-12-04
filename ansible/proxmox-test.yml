@@ -5,29 +5,16 @@
   gather_facts: no
 
   tasks:
-    - name: Get Proxmox cluster status
+    - name: List VMs on node
       uri:
-        url: "https://{{ proxmox_api_host }}:8006/api2/json/cluster/status"
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/qemu"
         method: GET
         headers:
           Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
         validate_certs: no
-      register: cluster_status
+      register: vm_list
 
-    - name: Show cluster status
+    - name: Show VMs
       debug:
-        var: cluster_status.json
-
-    - name: Get nodes list
-      uri:
-        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes"
-        method: GET
-        headers:
-          Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
-        validate_certs: no
-      register: nodes_list
-
-    - name: Show available nodes
-      debug:
-        msg: "Nodes disponibles: {{ nodes_list.json.data | map(attribute='node') | list }}"
+        msg: "VMs sur {{ proxmox_node }}: {{ vm_list.json.data | map(attribute='name') | list }}"
 
