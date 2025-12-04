@@ -1,0 +1,49 @@
+---
+- name: Create LXC Container on Proxmox
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    container_id: 30000
+    container_name: "test-nuit-info"
+    container_memory: 512
+    container_cores: 1
+    container_disk: 8
+
+  tasks:
+    - name: Download Debian template if needed
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/aplinfo"
+        method: GET
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
+        validate_certs: no
+      register: templates_available
+
+    - name: Create LXC container
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/lxc"
+        method: POST
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
+        body_format: form-urlencoded
+        body:
+          vmid: "{{ container_id }}"
+          hostname: "{{ container_name }}"
+          ostemplate: "local:vztmpl/debian-12-standard_12.7-1_amd64.tar.zst"
+          storage: "data"
+          memory: "{{ container_memory }}"
+          cores: "{{ container_cores }}"
+          rootfs: "data:{{ container_disk }}"
+          net0: "name=eth0,bridge=vmbr0,ip=dhcp"
+          unprivileged: 1
+          start: 1
+        validate_certs: no
+        status_code: [200, 202]
+      register: create_result
+
+    - name: Show result
+      debug:
+        msg: "Container {{ container_id }} ({{ container_name }}) creation lancee. Task ID: {{ create_result.json.data }}"
+
