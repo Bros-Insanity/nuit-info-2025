@@ -10,8 +10,38 @@
     container_memory: 512
     container_cores: 1
     container_disk: 8
+    template_name: "debian-12-standard_12.7-1_amd64.tar.zst"
 
   tasks:
+    - name: Check if template exists
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/storage/local/content"
+        method: GET
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
+        validate_certs: no
+      register: storage_content
+
+    - name: Download Debian template if missing
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/aplinfo"
+        method: POST
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
+        body_format: form-urlencoded
+        body:
+          storage: "local"
+          template: "{{ template_name }}"
+        validate_certs: no
+        status_code: [200, 202]
+      register: download_result
+      when: storage_content.json.data | selectattr('volid', 'search', 'debian-12') | list | length == 0
+
+    - name: Wait for template download
+      pause:
+        seconds: 30
+      when: download_result is changed
+
     - name: Create LXC container
       uri:
         url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/lxc"
