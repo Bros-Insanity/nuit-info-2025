@@ -1,0 +1,15 @@
+---
+- name: Docker Hello World
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  tasks:
+    - name: Run Docker Hello World
+      command: docker run hello-world
+      register: docker_output
+
+    - name: Show output
+      debug:
+        var: docker_output.stdout_lines
+
