@@ -1,0 +1,102 @@
+---
+- name: Create LXC Container on Proxmox
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    container_id: 30000
+    container_name: "test-nuit-info"
+    container_memory: 512
+    container_cores: 1
+    container_disk: 8
+    template_name: "debian-12-standard_12.7-1_amd64.tar.zst"
+
+  tasks:
+    - name: Check if template exists
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/storage/local/content"
+        method: GET
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
+        validate_certs: no
+      register: storage_content
+
+    - name: Get available templates list
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/aplinfo"
+        method: GET
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
+        validate_certs: no
+      register: available_templates
+      when: storage_content.json.data | selectattr('volid', 'search', 'debian-12') | list | length == 0
+
+    - name: Find Debian 12 template
+      set_fact:
+        debian_template: "{{ available_templates.json.data | selectattr('template', 'search', 'debian-12') | first }}"
+      when: available_templates is not skipped
+
+    - name: Download Debian template if missing
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/aplinfo"
+        method: POST
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
+        body_format: form-urlencoded
+        body:
+          storage: "local"
+          template: "{{ debian_template.template }}"
+        validate_certs: no
+        status_code: [200, 202]
+      register: download_result
+      when: debian_template is defined
+
+    - name: Wait for template download
+      pause:
+        seconds: 30
+      when: download_result is changed
+
+    - name: Get current templates on storage
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/storage/local/content"
+        method: GET
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
+        validate_certs: no
+      register: current_templates
+
+    - name: Find existing Debian template
+      set_fact:
+        existing_template: "{{ current_templates.json.data | selectattr('volid', 'search', 'debian-12') | first }}"
+
+    - name: Show template to use
+      debug:
+        msg: "Using template: {{ existing_template.volid }}"
+
+    - name: Create LXC container
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/lxc"
+        method: POST
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
+        body_format: form-urlencoded
+        body:
+          vmid: "{{ container_id }}"
+          hostname: "{{ container_name }}"
+          ostemplate: "{{ existing_template.volid }}"
+          storage: "data"
+          memory: "{{ container_memory }}"
+          cores: "{{ container_cores }}"
+          rootfs: "data:{{ container_disk }}"
+          net0: "name=eth0,bridge=vmbr0,ip=dhcp"
+          unprivileged: 1
+          start: 1
+        validate_certs: no
+        status_code: [200, 202]
+      register: create_result
+
+    - name: Show result
+      debug:
+        msg: "Container {{ container_id }} ({{ container_name }}) creation lancee. Task ID: {{ create_result.json.data }}"
+

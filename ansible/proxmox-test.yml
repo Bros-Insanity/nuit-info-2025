@@ -1,0 +1,20 @@
+---
+- name: Test Proxmox API Connection
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  tasks:
+    - name: List VMs on node
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/qemu"
+        method: GET
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
+        validate_certs: no
+      register: vm_list
+
+    - name: Show VMs
+      debug:
+        msg: "VMs sur {{ proxmox_node }}: {{ vm_list.json.data | map(attribute='name') | list }}"
+

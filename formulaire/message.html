@@ -1,0 +1,51 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Nomination au titre de Chevalier</title>
+  <style>
+    body {
+      font-family: Georgia, serif;
+      padding: 2em;
+      background: #f9f7f3;
+    }
+    .message {
+      border: 2px solid #333;
+      padding: 2em;
+      background: #fff;
+      max-width: 800px;
+      margin: auto;
+      white-space: pre-wrap;
+    }
+    #blasonContainer svg {
+      margin-top: 2em;
+      width: 200px;
+      height: 250px;
+      border: 1px solid #000;
+    }
+  </style>
+</head>
+<body>
+  <h1>📜 Acte de nomination</h1>
+  <div class="message" id="messageRSE"></div>
+  <div id="blasonContainer"></div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+
+    const message = 
+`Cher comte ${params.get("prenom")} Ier de ${params.get("nom")}, comte de ${params.get("residence")}, vassal du roi du ${params.get("pays")}, né des Terres de ${params.get("naissanceVille")} le ${params.get("naissanceDate")}, fruit de l’union de l’aimé·e ${params.get("parent1")} et du respecté·e ${params.get("parent2")}.
+
+Par les droits conférés par le Royaume des Informaticiens, moi, Andreas Ier de Mulard, né sur le comté de Chambray-lès-Tours, te confirme le titre de Chevalier de la RSE, et la gloire qu’il incarne.`;
+
+    document.getElementById("messageRSE").textContent = message;
+
+    const svgCode = params.get("blasonSvg");
+    if (svgCode) {
+      const decoded = decodeURIComponent(svgCode);
+      document.getElementById("blasonContainer").innerHTML = decoded;
+    }
+  </script>
+</body>
+</html>
