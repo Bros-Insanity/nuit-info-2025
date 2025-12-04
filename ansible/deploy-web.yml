@@ -119,71 +119,46 @@
           net0: "name=eth0,bridge=vmbr0,ip={{ container_ip }},gw={{ container_gateway }}"
           nameserver: "{{ container_dns }}"
           unprivileged: 1
-          start: 1
+          start: 0
         validate_certs: no
         status_code: [200, 202]
       register: create_result
 
-    - name: Wait for container to start
+    - name: Wait for container filesystem to be ready
       pause:
-        seconds: 15
+        seconds: 5
 
-    # --- Installation de nginx et deploiement ---
-    - name: Execute commands in container - Update packages
+    # --- Installation via commandes inline executees au demarrage ---
+    # On demarre le container et on attend qu'il soit pret
+    - name: Start container
       uri:
-        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/lxc/{{ container_id }}/exec"
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/lxc/{{ container_id }}/status/start"
         method: POST
         headers:
           Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
-        body_format: json
-        body:
-          command: ["apt-get", "update"]
         validate_certs: no
-        status_code: [200, 202, 500]
-      register: exec_update
-      ignore_errors: yes
+        status_code: [200, 202]
+      register: start_result
 
-    - name: Execute commands in container - Install nginx and curl
-      uri:
-        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/lxc/{{ container_id }}/exec"
-        method: POST
-        headers:
-          Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
-        body_format: json
-        body:
-          command: ["apt-get", "install", "-y", "nginx", "curl"]
-        validate_certs: no
-        status_code: [200, 202, 500]
-      register: exec_install
-      ignore_errors: yes
+    - name: Wait for container to be ready
+      pause:
+        seconds: 30
 
-    - name: Execute commands in container - Download test.html
-      uri:
-        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/lxc/{{ container_id }}/exec"
-        method: POST
-        headers:
-          Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
-        body_format: json
-        body:
-          command: ["curl", "-o", "/var/www/html/index.html", "{{ github_repo }}"]
-        validate_certs: no
-        status_code: [200, 202, 500]
-      register: exec_download
-      ignore_errors: yes
-
-    - name: Execute commands in container - Start nginx
-      uri:
-        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/lxc/{{ container_id }}/exec"
-        method: POST
-        headers:
-          Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
-        body_format: json
-        body:
-          command: ["systemctl", "enable", "--now", "nginx"]
-        validate_certs: no
-        status_code: [200, 202, 500]
-      register: exec_nginx
-      ignore_errors: yes
+    # Note: L'installation de nginx doit etre faite manuellement ou via SSH
+    # Pour automatiser, il faut soit:
+    # 1. Avoir acces SSH au serveur Proxmox pour utiliser 'pct exec'
+    # 2. Configurer SSH dans le container et utiliser Ansible normalement
+    # 3. Utiliser un script d'initialisation dans le template
+    - name: Display manual installation instructions
+      debug:
+        msg: |
+          Container {{ container_id }} cree avec IP {{ container_ip }}
+          Pour installer nginx, connectez-vous au container et executez:
+          ssh root@10.0.0.20 (apres configuration du mot de passe)
+          OU
+          Depuis le serveur Proxmox: pct exec {{ container_id }} -- apt-get update && apt-get install -y nginx curl
+          pct exec {{ container_id }} -- curl -o /var/www/html/index.html {{ github_repo }}
+          pct exec {{ container_id }} -- systemctl enable --now nginx
 
     - name: Show result
       debug:
