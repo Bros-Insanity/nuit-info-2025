@@ -21,9 +21,23 @@
           Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
         validate_certs: no
       register: storage_content
-      ignore_errors: yes
 
-    - name: Download Debian template
+    - name: Get available templates list
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/aplinfo"
+        method: GET
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
+        validate_certs: no
+      register: available_templates
+      when: storage_content.json.data | selectattr('volid', 'search', 'debian-12') | list | length == 0
+
+    - name: Find Debian 12 template
+      set_fact:
+        debian_template: "{{ available_templates.json.data | selectattr('template', 'search', 'debian-12') | first }}"
+      when: available_templates is not skipped
+
+    - name: Download Debian template if missing
       uri:
         url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/aplinfo"
         method: POST
@@ -32,16 +46,33 @@
         body_format: form-urlencoded
         body:
           storage: "local"
-          template: "{{ template_name }}"
+          template: "{{ debian_template.template }}"
         validate_certs: no
-        status_code: [200, 202, 500]
+        status_code: [200, 202]
       register: download_result
-      when: storage_content.json.data | selectattr('volid', 'search', 'debian-12') | list | length == 0
+      when: debian_template is defined
 
     - name: Wait for template download
       pause:
-        seconds: 10
+        seconds: 30
       when: download_result is changed
+
+    - name: Get current templates on storage
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/storage/local/content"
+        method: GET
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
+        validate_certs: no
+      register: current_templates
+
+    - name: Find existing Debian template
+      set_fact:
+        existing_template: "{{ current_templates.json.data | selectattr('volid', 'search', 'debian-12') | first }}"
+
+    - name: Show template to use
+      debug:
+        msg: "Using template: {{ existing_template.volid }}"
 
     - name: Create LXC container
       uri:
@@ -53,7 +84,7 @@
         body:
           vmid: "{{ container_id }}"
           hostname: "{{ container_name }}"
-          ostemplate: "local:vztmpl/debian-12-standard_12.7-1_amd64.tar.zst"
+          ostemplate: "{{ existing_template.volid }}"
           storage: "data"
           memory: "{{ container_memory }}"
           cores: "{{ container_cores }}"
