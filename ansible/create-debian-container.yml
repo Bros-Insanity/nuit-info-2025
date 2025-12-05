@@ -15,6 +15,49 @@
     container_dns: "1.1.1.1"
 
   tasks:
+    - name: Check if container exists
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/lxc/{{ container_id }}/status/current"
+        method: GET
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
+        validate_certs: no
+        status_code: [200, 500]
+      register: container_check
+      ignore_errors: yes
+
+    - name: Stop existing container
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/lxc/{{ container_id }}/status/stop"
+        method: POST
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
+        validate_certs: no
+        status_code: [200, 202, 500]
+      when: container_check.status == 200
+      ignore_errors: yes
+
+    - name: Wait for container to stop
+      pause:
+        seconds: 5
+      when: container_check.status == 200
+
+    - name: Delete existing container
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/lxc/{{ container_id }}"
+        method: DELETE
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
+        validate_certs: no
+        status_code: [200, 202, 500]
+      when: container_check.status == 200
+      ignore_errors: yes
+
+    - name: Wait for container deletion
+      pause:
+        seconds: 5
+      when: container_check.status == 200
+
     - name: Get current templates on storage
       uri:
         url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/storage/local/content"
