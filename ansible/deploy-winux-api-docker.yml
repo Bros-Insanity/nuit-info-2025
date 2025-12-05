@@ -1,0 +1,154 @@
+---
+- name: Déployer l'API Winux dans un container Docker
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    deploy_dir: "/opt/winux-api"
+    container_name: "winux-api"
+
+  tasks:
+    - name: Vérifier que Docker est installé
+      command: docker --version
+      register: docker_version
+      changed_when: false
+      failed_when: false
+
+    - name: Installer Docker si nécessaire
+      block:
+        - name: Installer les dépendances
+          apt:
+            name:
+              - apt-transport-https
+              - ca-certificates
+              - curl
+              - gnupg
+              - lsb-release
+            state: present
+            update_cache: yes
+
+        - name: Ajouter la clé GPG de Docker
+          apt_key:
+            url: https://download.docker.com/linux/debian/gpg
+            state: present
+
+        - name: Ajouter le repository Docker
+          apt_repository:
+            repo: "deb [arch=amd64] https://download.docker.com/linux/debian {{ ansible_distribution_release }} stable"
+            state: present
+
+        - name: Installer Docker
+          apt:
+            name:
+              - docker-ce
+              - docker-ce-cli
+              - containerd.io
+            state: present
+            update_cache: yes
+
+        - name: Démarrer Docker
+          systemd:
+            name: docker
+            state: started
+            enabled: yes
+      when: docker_version.rc != 0
+
+    - name: Vérifier que Docker Compose est installé
+      command: docker compose version
+      register: docker_compose_version
+      changed_when: false
+      failed_when: false
+
+    - name: Installer Docker Compose si nécessaire
+      block:
+        - name: Télécharger Docker Compose
+          get_url:
+            url: https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64
+            dest: /usr/local/bin/docker-compose
+            mode: '0755'
+
+        - name: Créer le lien symbolique
+          file:
+            src: /usr/local/bin/docker-compose
+            dest: /usr/bin/docker-compose
+            state: link
+      when: docker_compose_version.rc != 0
+
+    - name: Créer le répertoire de déploiement
+      file:
+        path: "{{ deploy_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Copier le Dockerfile
+      copy:
+        src: ../Dockerfile
+        dest: "{{ deploy_dir }}/Dockerfile"
+        mode: '0644'
+
+    - name: Copier docker-compose.yml
+      copy:
+        src: ../docker-compose.yml
+        dest: "{{ deploy_dir }}/docker-compose.yml"
+        mode: '0644'
+
+    - name: Copier api_winux.js
+      copy:
+        src: ../api_winux.js
+        dest: "{{ deploy_dir }}/api_winux.js"
+        mode: '0755'
+
+    - name: Copier package.json
+      copy:
+        src: ../package.json
+        dest: "{{ deploy_dir }}/package.json"
+        mode: '0644'
+
+    - name: Arrêter et supprimer l'ancien container s'il existe
+      shell: |
+        cd {{ deploy_dir }} && \
+        docker-compose down 2>/dev/null || true && \
+        docker rm -f {{ container_name }} 2>/dev/null || true
+      ignore_errors: yes
+      changed_when: false
+
+    - name: Construire l'image Docker
+      shell: |
+        cd {{ deploy_dir }} && \
+        docker-compose build
+      register: build_result
+
+    - name: Démarrer le container
+      shell: |
+        cd {{ deploy_dir }} && \
+        docker-compose up -d
+      register: start_result
+
+    - name: Attendre que le container soit prêt
+      wait_for:
+        port: 5000
+        host: 127.0.0.1
+        delay: 5
+        timeout: 30
+
+    - name: Vérifier que le container tourne
+      shell: docker ps | grep {{ container_name }}
+      register: container_status
+      changed_when: false
+
+    - name: Afficher le statut du container
+      debug:
+        msg: "{{ container_status.stdout }}"
+
+    - name: Tester l'endpoint de santé
+      uri:
+        url: http://127.0.0.1:5000/api/winux/health
+        method: GET
+        status_code: [200]
+      register: health_check
+
+    - name: Afficher le résultat du health check
+      debug:
+        msg: "✅ API Winux déployée et opérationnelle : {{ health_check.json }}"
+
