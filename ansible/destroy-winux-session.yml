@@ -1,0 +1,59 @@
+---
+- name: Destroy Winux Temporary Session
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    container_id: "{{ container_id | required }}"
+
+  tasks:
+    - name: Check if container exists
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/lxc/{{ container_id }}/status/current"
+        method: GET
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
+        validate_certs: no
+        status_code: [200, 500]
+      register: container_check
+      ignore_errors: yes
+
+    - name: Stop container if running
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/lxc/{{ container_id }}/status/stop"
+        method: POST
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
+        validate_certs: no
+        status_code: [200, 202, 500]
+      when: container_check.status == 200
+      ignore_errors: yes
+
+    - name: Wait for container to stop
+      pause:
+        seconds: 5
+      when: container_check.status == 200
+
+    - name: Delete container
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/lxc/{{ container_id }}"
+        method: DELETE
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
+        validate_certs: no
+        status_code: [200, 202, 500]
+      when: container_check.status == 200
+      ignore_errors: yes
+
+    - name: Show result
+      debug:
+        msg: |
+          Session Winux (Container ID: {{ container_id }}) supprimee avec succes!
+      when: container_check.status == 200
+
+    - name: Container not found
+      debug:
+        msg: "Container {{ container_id }} n'existe pas ou a deja ete supprime."
+      when: container_check.status != 200
+

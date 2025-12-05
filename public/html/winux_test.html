@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Winux - Session Temporaire</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.7;
+            color: #2c3e50;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            padding: 3rem;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            color: #667eea;
+            margin-bottom: 0.5rem;
+        }
+        
+        .header p {
+            color: #6c757d;
+            font-size: 1.1rem;
+        }
+        
+        .session-control {
+            background: #f8f9fa;
+            padding: 2rem;
+            border-radius: 10px;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 1rem 2.5rem;
+            font-size: 1.1rem;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+        
+        .btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            box-shadow: 0 4px 15px rgba(245, 87, 108, 0.4);
+        }
+        
+        .btn-danger:hover {
+            box-shadow: 0 6px 20px rgba(245, 87, 108, 0.6);
+        }
+        
+        .session-info {
+            background: white;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            padding: 2rem;
+            margin-top: 2rem;
+            display: none;
+        }
+        
+        .session-info.active {
+            display: block;
+        }
+        
+        .session-info h2 {
+            color: #667eea;
+            margin-bottom: 1.5rem;
+            font-size: 1.8rem;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .info-item {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .info-item label {
+            display: block;
+            font-size: 0.9rem;
+            color: #6c757d;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+        
+        .info-item value {
+            display: block;
+            font-size: 1.2rem;
+            color: #2c3e50;
+            font-weight: 700;
+        }
+        
+        .timer {
+            text-align: center;
+            padding: 1.5rem;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border-radius: 10px;
+            margin-top: 1rem;
+        }
+        
+        .timer h3 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .timer .countdown {
+            font-size: 2.5rem;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+        }
+        
+        .loading.active {
+            display: block;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            display: none;
+        }
+        
+        .alert.active {
+            display: block;
+        }
+        
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .rdp-info {
+            background: #e7f3ff;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-top: 1rem;
+        }
+        
+        .rdp-info h3 {
+            color: #667eea;
+            margin-bottom: 1rem;
+        }
+        
+        .rdp-info code {
+            background: white;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            display: block;
+            margin: 0.5rem 0;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Test Winux</h1>
+            <p>Lancez une session temporaire de Winux pour tester le système</p>
+        </div>
+        
+        <div class="alert alert-success" id="alertSuccess"></div>
+        <div class="alert alert-error" id="alertError"></div>
+        
+        <div class="session-control">
+            <button class="btn" id="btnCreateSession" onclick="createSession()">
+                Lancer une session Winux
+            </button>
+            <button class="btn btn-danger" id="btnDestroySession" onclick="destroySession()" style="display: none; margin-top: 1rem;">
+                Terminer la session
+            </button>
+        </div>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Création de la session en cours...</p>
+        </div>
+        
+        <div class="session-info" id="sessionInfo">
+            <h2>Informations de la session</h2>
+            <div class="info-grid">
+                <div class="info-item">
+                    <label>Session ID</label>
+                    <value id="sessionId">-</value>
+                </div>
+                <div class="info-item">
+                    <label>Container ID</label>
+                    <value id="containerId">-</value>
+                </div>
+                <div class="info-item">
+                    <label>Adresse IP</label>
+                    <value id="containerIp">-</value>
+                </div>
+                <div class="info-item">
+                    <label>Port RDP</label>
+                    <value id="rdpPort">3389</value>
+                </div>
+            </div>
+            
+            <div class="timer" id="timer">
+                <h3>Temps restant</h3>
+                <div class="countdown" id="countdown">--:--</div>
+            </div>
+            
+            <div class="rdp-info">
+                <h3>Connexion RDP</h3>
+                <p>Pour vous connecter à votre session Winux, utilisez un client RDP avec les informations suivantes :</p>
+                <code>Adresse: <span id="rdpAddress">-</span></code>
+                <code>Port: 3389</code>
+                <p style="margin-top: 1rem; font-size: 0.9rem; color: #6c757d;">
+                    <strong>Note:</strong> La session sera automatiquement supprimée après expiration du temps imparti.
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const API_BASE = '/api/winux';
+        let currentSession = null;
+        let countdownInterval = null;
+        
+        async function createSession() {
+            const btnCreate = document.getElementById('btnCreateSession');
+            const btnDestroy = document.getElementById('btnDestroySession');
+            const loading = document.getElementById('loading');
+            const sessionInfo = document.getElementById('sessionInfo');
+            const alertSuccess = document.getElementById('alertSuccess');
+            const alertError = document.getElementById('alertError');
+            
+            // Masquer les alertes
+            alertSuccess.classList.remove('active');
+            alertError.classList.remove('active');
+            
+            // Afficher le loading
+            loading.classList.add('active');
+            btnCreate.disabled = true;
+            
+            try {
+                const response = await fetch(`${API_BASE}/sessions`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        duration_minutes: 30
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentSession = data.session;
+                    displaySessionInfo(data.session);
+                    alertSuccess.textContent = 'Session créée avec succès !';
+                    alertSuccess.classList.add('active');
+                    btnCreate.style.display = 'none';
+                    btnDestroy.style.display = 'block';
+                    startCountdown(data.session);
+                } else {
+                    throw new Error(data.error || 'Erreur lors de la création de la session');
+                }
+            } catch (error) {
+                alertError.textContent = `Erreur: ${error.message}`;
+                alertError.classList.add('active');
+            } finally {
+                loading.classList.remove('active');
+                btnCreate.disabled = false;
+            }
+        }
+        
+        async function destroySession() {
+            if (!currentSession) return;
+            
+            const btnDestroy = document.getElementById('btnDestroySession');
+            const loading = document.getElementById('loading');
+            const alertSuccess = document.getElementById('alertSuccess');
+            const alertError = document.getElementById('alertError');
+            
+            if (!confirm('Êtes-vous sûr de vouloir terminer cette session ?')) {
+                return;
+            }
+            
+            alertSuccess.classList.remove('active');
+            alertError.classList.remove('active');
+            loading.classList.add('active');
+            btnDestroy.disabled = true;
+            
+            try {
+                const response = await fetch(`${API_BASE}/sessions/${currentSession.session_id}`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alertSuccess.textContent = 'Session terminée avec succès';
+                    alertSuccess.classList.add('active');
+                    resetUI();
+                } else {
+                    throw new Error(data.error || 'Erreur lors de la suppression de la session');
+                }
+            } catch (error) {
+                alertError.textContent = `Erreur: ${error.message}`;
+                alertError.classList.add('active');
+            } finally {
+                loading.classList.remove('active');
+                btnDestroy.disabled = false;
+            }
+        }
+        
+        function displaySessionInfo(session) {
+            document.getElementById('sessionId').textContent = session.session_id;
+            document.getElementById('containerId').textContent = session.container_id;
+            document.getElementById('containerIp').textContent = session.container_ip || 'En attente...';
+            document.getElementById('rdpAddress').textContent = session.container_ip || 'En attente...';
+            document.getElementById('sessionInfo').classList.add('active');
+        }
+        
+        function startCountdown(session) {
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+            }
+            
+            let remaining = session.remaining_seconds || (session.duration_minutes * 60);
+            
+            function updateCountdown() {
+                if (remaining <= 0) {
+                    clearInterval(countdownInterval);
+                    document.getElementById('countdown').textContent = '00:00';
+                    alert('La session a expiré et sera automatiquement supprimée.');
+                    resetUI();
+                    return;
+                }
+                
+                const minutes = Math.floor(remaining / 60);
+                const seconds = remaining % 60;
+                document.getElementById('countdown').textContent = 
+                    `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                
+                remaining--;
+            }
+            
+            updateCountdown();
+            countdownInterval = setInterval(updateCountdown, 1000);
+        }
+        
+        function resetUI() {
+            currentSession = null;
+            document.getElementById('sessionInfo').classList.remove('active');
+            document.getElementById('btnCreateSession').style.display = 'block';
+            document.getElementById('btnDestroySession').style.display = 'none';
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+                countdownInterval = null;
+            }
+        }
+        
+        // Vérifier s'il existe une session active au chargement
+        window.addEventListener('load', async () => {
+            try {
+                const response = await fetch(`${API_BASE}/sessions`);
+                const data = await response.json();
+                
+                if (data.success && data.sessions.length > 0) {
+                    // Prendre la première session active
+                    const session = data.sessions[0];
+                    currentSession = session;
+                    displaySessionInfo(session);
+                    document.getElementById('btnCreateSession').style.display = 'none';
+                    document.getElementById('btnDestroySession').style.display = 'block';
+                    startCountdown(session);
+                }
+            } catch (error) {
+                console.error('Erreur lors de la vérification des sessions:', error);
+            }
+        });
+    </script>
+</body>
+</html>
+
