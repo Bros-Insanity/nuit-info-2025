@@ -1,0 +1,20 @@
+[Unit]
+Description=Winux API Node.js
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/opt/winux
+Environment="NODE_ENV=production"
+Environment="PORT=5000"
+Environment="HOST=127.0.0.1"
+ExecStart=/usr/bin/node /opt/winux/api_winux.js
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+
