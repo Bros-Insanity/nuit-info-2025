@@ -24,6 +24,7 @@ Ce projet est une plateforme complète comprenant :
 - **Site Web** : Interface principale avec pages de contact, diplômes, et documentation
 - **API Winux** : Backend Node.js/Express pour gérer des sessions temporaires Windows
 - **Documentation IA** : Documentation interactive sur les modèles d'IA et l'éco-responsabilité
+- **IA Mail** : Bot de réponse automatique aux emails avec le modèle Qwen3
 - **CI/CD** : Déploiement automatique via Semaphore CI/CD et Ansible
 - **Docker** : Conteneurisation pour un déploiement simplifié
 
@@ -86,7 +87,19 @@ Documentation web interactive expliquant :
 
 **Documentation** : Voir [docs/ia-eco-responsable/README.md](docs/ia-eco-responsable/README.md)
 
-### 4. Déploiement Automatisé
+### 4. IA Mail - Bot de Réponse Automatique
+
+Système de réponse automatique aux emails utilisant le modèle Qwen3 :
+- Récupération des emails non lus via IMAP
+- Génération de réponses avec le modèle Qwen3-0.6B
+- Envoi automatique des réponses via SMTP
+- Déploiement automatisé via Ansible
+
+**Localisation** : `ai_deployment/`, `ansible/create-ai-container.yml`
+
+**Documentation** : Voir [README_AI_MAIL.md](README_AI_MAIL.md)
+
+### 5. Déploiement Automatisé
 
 Système de déploiement via :
 - **Semaphore CI/CD** : Automatisation des déploiements
@@ -204,12 +217,22 @@ location /api/winux {
   - Structure des fichiers
   - Personnalisation
 
+- **[README_AI_MAIL.md](README_AI_MAIL.md)** : Documentation IA Mail
+  - Installation et configuration
+  - Utilisation du bot email
+  - Déploiement avec Ansible
+  - Dépannage
+
 ### Structure du Projet
 
 ```
 nuit-info-2025/
+├── ai_deployment/              # Bot IA Mail
+│   ├── script.py
+│   └── requirements.txt
 ├── ansible/                    # Playbooks Ansible
 │   ├── create-debian-container.yml
+│   ├── create-ai-container.yml
 │   ├── create-winux-session.yml
 │   ├── deploy-winux-api-docker.yml
 │   └── destroy-winux-session.yml
