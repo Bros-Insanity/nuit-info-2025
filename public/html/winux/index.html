@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Winux - Sessions Temporaires</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #2c3e50;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 3rem;
+            animation: fadeIn 0.5s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding-bottom: 2rem;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .header h1 {
+            font-size: 2.8rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+        }
+        
+        .header p {
+            color: #6c757d;
+            font-size: 1.1rem;
+        }
+        
+        .alert {
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            display: none;
+            animation: slideDown 0.3s ease-out;
+        }
+        
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .alert.active {
+            display: block;
+        }
+        
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .session-control {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 2.5rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 1rem 2.5rem;
+            font-size: 1.1rem;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            margin: 0.5rem;
+        }
+        
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+        
+        .btn:active:not(:disabled) {
+            transform: translateY(0);
+        }
+        
+        .btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+            opacity: 0.6;
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            box-shadow: 0 4px 15px rgba(245, 87, 108, 0.4);
+        }
+        
+        .btn-danger:hover:not(:disabled) {
+            box-shadow: 0 6px 20px rgba(245, 87, 108, 0.6);
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+        }
+        
+        .loading.active {
+            display: block;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .session-info {
+            background: white;
+            border: 2px solid #667eea;
+            border-radius: 12px;
+            padding: 2.5rem;
+            margin-top: 2rem;
+            display: none;
+            animation: fadeIn 0.5s ease-in;
+        }
+        
+        .session-info.active {
+            display: block;
+        }
+        
+        .session-info h2 {
+            color: #667eea;
+            margin-bottom: 1.5rem;
+            font-size: 2rem;
+            text-align: center;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .info-item {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 1.5rem;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+            transition: transform 0.2s ease;
+        }
+        
+        .info-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .info-item label {
+            display: block;
+            font-size: 0.85rem;
+            color: #6c757d;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .info-item value {
+            display: block;
+            font-size: 1.3rem;
+            color: #2c3e50;
+            font-weight: 700;
+            word-break: break-all;
+        }
+        
+        .timer {
+            text-align: center;
+            padding: 2rem;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border-radius: 12px;
+            margin: 2rem 0;
+            box-shadow: 0 4px 15px rgba(245, 87, 108, 0.3);
+        }
+        
+        .timer h3 {
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+            opacity: 0.9;
+        }
+        
+        .timer .countdown {
+            font-size: 3rem;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .timer.warning {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+            animation: pulse 1s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+        
+        .rdp-info {
+            background: linear-gradient(135deg, #e7f3ff 0%, #d6e9f5 100%);
+            border: 2px solid #667eea;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-top: 2rem;
+        }
+        
+        .rdp-info h3 {
+            color: #667eea;
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
+        
+        .rdp-info code {
+            background: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            display: block;
+            margin: 0.75rem 0;
+            font-family: 'Courier New', monospace;
+            font-size: 1.1rem;
+            border: 1px solid #dee2e6;
+            word-break: break-all;
+        }
+        
+        .rdp-info .copy-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+            transition: background 0.2s ease;
+        }
+        
+        .rdp-info .copy-btn:hover {
+            background: #5568d3;
+        }
+        
+        .footer-note {
+            margin-top: 2rem;
+            padding: 1rem;
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 8px;
+            color: #856404;
+            font-size: 0.9rem;
+            text-align: center;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 1.5rem;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .timer .countdown {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Winux</h1>
+            <p>Sessions temporaires de bureau Linux avec accès RDP</p>
+        </div>
+        
+        <div class="alert alert-success" id="alertSuccess"></div>
+        <div class="alert alert-error" id="alertError"></div>
+        <div class="alert alert-info" id="alertInfo"></div>
+        
+        <div class="session-control">
+            <button class="btn" id="btnCreateSession" onclick="createSession()">
+                ✨ Lancer une session Winux
+            </button>
+            <button class="btn btn-danger" id="btnDestroySession" onclick="destroySession()" style="display: none;">
+                🗑️ Terminer la session
+            </button>
+        </div>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Création de la session en cours... Cela peut prendre 2-3 minutes.</p>
+        </div>
+        
+        <div class="session-info" id="sessionInfo">
+            <h2>📋 Informations de la session</h2>
+            <div class="info-grid">
+                <div class="info-item">
+                    <label>Session ID</label>
+                    <value id="sessionId">-</value>
+                </div>
+                <div class="info-item">
+                    <label>Container ID</label>
+                    <value id="containerId">-</value>
+                </div>
+                <div class="info-item">
+                    <label>Adresse IP</label>
+                    <value id="containerIp">-</value>
+                </div>
+                <div class="info-item">
+                    <label>Port RDP</label>
+                    <value id="rdpPort">3389</value>
+                </div>
+            </div>
+            
+            <div class="timer" id="timer">
+                <h3>⏱️ Temps restant</h3>
+                <div class="countdown" id="countdown">--:--</div>
+            </div>
+            
+            <div class="rdp-info">
+                <h3>🔌 Connexion RDP</h3>
+                <p>Pour vous connecter à votre session Winux, utilisez un client RDP avec les informations suivantes :</p>
+                <div>
+                    <code id="rdpAddress">-</code>
+                    <button class="copy-btn" onclick="copyToClipboard('rdpAddress')">📋 Copier</button>
+                </div>
+                <code>Port: 3389</code>
+                <p style="margin-top: 1rem; font-size: 0.9rem; color: #6c757d;">
+                    <strong>💡 Note:</strong> La session sera automatiquement supprimée après expiration du temps imparti.
+                </p>
+            </div>
+            
+            <div class="footer-note">
+                ⚠️ Les sessions sont temporaires et seront supprimées automatiquement après expiration.
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const API_BASE = '/api/winux';
+        let currentSession = null;
+        let countdownInterval = null;
+        let refreshInterval = null;
+        
+        function showAlert(type, message) {
+            const alert = document.getElementById(`alert${type.charAt(0).toUpperCase() + type.slice(1)}`);
+            alert.textContent = message;
+            alert.classList.add('active');
+            setTimeout(() => {
+                alert.classList.remove('active');
+            }, 5000);
+        }
+        
+        function copyToClipboard(elementId) {
+            const element = document.getElementById(elementId);
+            const text = element.textContent.trim();
+            navigator.clipboard.writeText(text).then(() => {
+                showAlert('success', 'Adresse copiée dans le presse-papiers !');
+            }).catch(err => {
+                showAlert('error', 'Erreur lors de la copie');
+            });
+        }
+        
+        async function createSession() {
+            const btnCreate = document.getElementById('btnCreateSession');
+            const btnDestroy = document.getElementById('btnDestroySession');
+            const loading = document.getElementById('loading');
+            const sessionInfo = document.getElementById('sessionInfo');
+            
+            // Masquer les alertes
+            document.querySelectorAll('.alert').forEach(a => a.classList.remove('active'));
+            
+            // Afficher le loading
+            loading.classList.add('active');
+            btnCreate.disabled = true;
+            sessionInfo.classList.remove('active');
+            
+            try {
+                const response = await fetch(`${API_BASE}/sessions`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        duration_minutes: 30
+                    })
+                });
+                
+                // Vérifier le Content-Type avant de parser
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await response.text();
+                    throw new Error(`Réponse invalide de l'API (${response.status}): ${text.substring(0, 100)}`);
+                }
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || `Erreur HTTP ${response.status}`);
+                }
+                
+                if (data.success) {
+                    currentSession = data.session;
+                    displaySessionInfo(data.session);
+                    showAlert('success', '✅ Session créée avec succès !');
+                    btnCreate.style.display = 'none';
+                    btnDestroy.style.display = 'block';
+                    startCountdown(data.session);
+                    startRefreshInterval();
+                } else {
+                    throw new Error(data.error || 'Erreur lors de la création de la session');
+                }
+            } catch (error) {
+                let errorMessage = error.message;
+                if (error instanceof SyntaxError) {
+                    errorMessage = 'Erreur de communication avec l\'API. Vérifiez que l\'API Flask est démarrée et que nginx est configuré.';
+                } else if (errorMessage.includes('404') || errorMessage.includes('Not Found')) {
+                    errorMessage = 'API non trouvée (404). Vérifiez :\n1. L\'API Flask est démarrée (python3 api_winux.py)\n2. Nginx est configuré pour proxy /api/winux vers localhost:5000\n3. Le service nginx est actif';
+                }
+                showAlert('error', `❌ Erreur: ${errorMessage}`);
+                console.error('Erreur détaillée:', error);
+            } finally {
+                loading.classList.remove('active');
+                btnCreate.disabled = false;
+            }
+        }
+        
+        async function destroySession() {
+            if (!currentSession) return;
+            
+            if (!confirm('Êtes-vous sûr de vouloir terminer cette session ? Toutes les données seront perdues.')) {
+                return;
+            }
+            
+            const btnDestroy = document.getElementById('btnDestroySession');
+            const loading = document.getElementById('loading');
+            
+            document.querySelectorAll('.alert').forEach(a => a.classList.remove('active'));
+            loading.classList.add('active');
+            btnDestroy.disabled = true;
+            
+            try {
+                const response = await fetch(`${API_BASE}/sessions/${currentSession.session_id}`, {
+                    method: 'DELETE'
+                });
+                
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await response.text();
+                    throw new Error(`Réponse invalide de l'API (${response.status}): ${text.substring(0, 100)}`);
+                }
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || `Erreur HTTP ${response.status}`);
+                }
+                
+                if (data.success) {
+                    showAlert('success', '✅ Session terminée avec succès');
+                    resetUI();
+                } else {
+                    throw new Error(data.error || 'Erreur lors de la suppression de la session');
+                }
+            } catch (error) {
+                let errorMessage = error.message;
+                if (error instanceof SyntaxError) {
+                    errorMessage = 'Erreur de communication avec l\'API. Vérifiez que l\'API Flask est démarrée et que nginx est configuré.';
+                } else if (errorMessage.includes('404') || errorMessage.includes('Not Found')) {
+                    errorMessage = 'API non trouvée (404). Vérifiez :\n1. L\'API Flask est démarrée (python3 api_winux.py)\n2. Nginx est configuré pour proxy /api/winux vers localhost:5000\n3. Le service nginx est actif';
+                }
+                showAlert('error', `❌ Erreur: ${errorMessage}`);
+                console.error('Erreur détaillée:', error);
+            } finally {
+                loading.classList.remove('active');
+                btnDestroy.disabled = false;
+            }
+        }
+        
+        function displaySessionInfo(session) {
+            document.getElementById('sessionId').textContent = session.session_id;
+            document.getElementById('containerId').textContent = session.container_id;
+            const ip = session.container_ip || 'En attente...';
+            document.getElementById('containerIp').textContent = ip;
+            document.getElementById('rdpAddress').textContent = ip !== 'En attente...' ? `${ip}:3389` : '-';
+            document.getElementById('sessionInfo').classList.add('active');
+        }
+        
+        function startCountdown(session) {
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+            }
+            
+            let remaining = session.remaining_seconds || (session.duration_minutes * 60);
+            const timerElement = document.getElementById('timer');
+            const countdownElement = document.getElementById('countdown');
+            
+            function updateCountdown() {
+                if (remaining <= 0) {
+                    clearInterval(countdownInterval);
+                    countdownElement.textContent = '00:00';
+                    showAlert('info', '⏰ La session a expiré et sera automatiquement supprimée.');
+                    resetUI();
+                    return;
+                }
+                
+                const minutes = Math.floor(remaining / 60);
+                const seconds = remaining % 60;
+                countdownElement.textContent = 
+                    `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                
+                // Avertissement visuel si moins de 5 minutes
+                if (remaining < 300) {
+                    timerElement.classList.add('warning');
+                } else {
+                    timerElement.classList.remove('warning');
+                }
+                
+                remaining--;
+            }
+            
+            updateCountdown();
+            countdownInterval = setInterval(updateCountdown, 1000);
+        }
+        
+        function startRefreshInterval() {
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+            }
+            
+            // Rafraîchir les informations de session toutes les 30 secondes
+            refreshInterval = setInterval(async () => {
+                if (!currentSession) return;
+                
+                try {
+                    const response = await fetch(`${API_BASE}/sessions/${currentSession.session_id}`);
+                    
+                    const contentType = response.headers.get('content-type');
+                    if (!contentType || !contentType.includes('application/json')) {
+                        console.warn('API non disponible lors du rafraîchissement');
+                        return;
+                    }
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        currentSession = data.session;
+                        displaySessionInfo(data.session);
+                        startCountdown(data.session);
+                    } else {
+                        // Session n'existe plus
+                        resetUI();
+                    }
+                } catch (error) {
+                    if (error instanceof SyntaxError) {
+                        console.warn('API non disponible lors du rafraîchissement');
+                    } else {
+                        console.error('Erreur lors du rafraîchissement:', error);
+                    }
+                }
+            }, 30000);
+        }
+        
+        function resetUI() {
+            currentSession = null;
+            document.getElementById('sessionInfo').classList.remove('active');
+            document.getElementById('btnCreateSession').style.display = 'block';
+            document.getElementById('btnDestroySession').style.display = 'none';
+            
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+                countdownInterval = null;
+            }
+            
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+                refreshInterval = null;
+            }
+        }
+        
+        // Vérifier s'il existe une session active au chargement
+        window.addEventListener('load', async () => {
+            try {
+                const response = await fetch(`${API_BASE}/sessions`);
+                
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    console.warn('API non disponible ou réponse invalide');
+                    return;
+                }
+                
+                const data = await response.json();
+                
+                if (data.success && data.sessions.length > 0) {
+                    // Prendre la première session active
+                    const session = data.sessions[0];
+                    currentSession = session;
+                    displaySessionInfo(session);
+                    document.getElementById('btnCreateSession').style.display = 'none';
+                    document.getElementById('btnDestroySession').style.display = 'block';
+                    startCountdown(session);
+                    startRefreshInterval();
+                    showAlert('info', '📱 Session active détectée');
+                }
+            } catch (error) {
+                if (error instanceof SyntaxError) {
+                    console.warn('API non disponible - L\'API Flask n\'est probablement pas démarrée');
+                } else {
+                    console.error('Erreur lors de la vérification des sessions:', error);
+                }
+            }
+        });
+    </script>
+</body>
+</html>

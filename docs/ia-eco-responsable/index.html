@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IA Éco-Responsable - Comprendre les Modèles d'IA</title>
+    <link rel="stylesheet" href="../../css/ia-eco-responsable/styles.css">
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']]
+            }
+        };
+    </script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <h1 class="logo">🧠 IA Éco-Responsable</h1>
+            <ul class="nav-menu">
+                <li><a href="../../index.html">← Accueil</a></li>
+                <li><a href="#introduction">Introduction</a></li>
+                <li><a href="#modeles">Modèles</a></li>
+                <li><a href="#eco">Éco-Responsabilité</a></li>
+                <li><a href="#llm">LLM & Données</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main>
+        <!-- Section Introduction -->
+        <section id="introduction" class="hero-section">
+            <div class="container">
+                <h1 class="hero-title">Comprendre l'Intelligence Artificielle</h1>
+                <p class="hero-subtitle">Exploration mathématique, visuelle et éco-responsable des modèles d'IA</p>
+                <div class="hero-stats">
+                    <div class="stat-card">
+                        <div class="stat-number">175B</div>
+                        <div class="stat-label">Paramètres (GPT-3)</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">284k</div>
+                        <div class="stat-label">CO₂ (tonnes) pour GPT-3</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">45TB</div>
+                        <div class="stat-label">Données d'entraînement</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section Modèles d'IA -->
+        <section id="modeles" class="models-section">
+            <div class="container">
+                <h2 class="section-title">Modèles d'Intelligence Artificielle</h2>
+                
+                <!-- Réseaux de Neurones -->
+                <article class="model-card">
+                    <div class="model-header">
+                        <h3>1. Réseaux de Neurones Artificiels (ANN)</h3>
+                        <span class="model-badge">Fondamentaux</span>
+                    </div>
+                    <div class="model-content">
+                        <div class="model-visualization">
+                            <canvas id="neuralNetworkChart"></canvas>
+                        </div>
+                        <div class="model-explanation">
+                            <h4>Fonctionnement Mathématique</h4>
+                            <p>Un neurone artificiel calcule une sortie à partir de plusieurs entrées pondérées :</p>
+                            <div class="formula">
+                                $$y = f\left(\sum_{i=1}^{n} w_i \cdot x_i + b\right)$$
+                            </div>
+                            <p>Où :</p>
+                            <ul class="math-list">
+                                <li>$x_i$ : entrées du neurone</li>
+                                <li>$w_i$ : poids associés</li>
+                                <li>$b$ : biais (bias)</li>
+                                <li>$f$ : fonction d'activation (ReLU, sigmoïde, tanh)</li>
+                            </ul>
+                            <h4>Fonctions d'Activation Courantes</h4>
+                            <div class="activation-functions">
+                                <div class="activation-card">
+                                    <strong>ReLU :</strong> $f(x) = \max(0, x)$
+                                    <p>Élimine les valeurs négatives, très efficace</p>
+                                </div>
+                                <div class="activation-card">
+                                    <strong>Sigmoïde :</strong> $f(x) = \frac{1}{1 + e^{-x}}$
+                                    <p>Sortie entre 0 et 1, pour la classification</p>
+                                </div>
+                                <div class="activation-card">
+                                    <strong>Tanh :</strong> $f(x) = \tanh(x) = \frac{e^x - e^{-x}}{e^x + e^{-x}}$
+                                    <p>Sortie entre -1 et 1, centrée</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- CNN -->
+                <article class="model-card">
+                    <div class="model-header">
+                        <h3>2. Réseaux de Neurones Convolutifs (CNN)</h3>
+                        <span class="model-badge">Vision</span>
+                    </div>
+                    <div class="model-content">
+                        <div class="model-visualization">
+                            <div class="cnn-visualization">
+                                <div class="cnn-layer">
+                                    <div class="layer-label">Image d'entrée</div>
+                                    <div class="pixel-grid" id="inputGrid"></div>
+                                </div>
+                                <div class="arrow">→</div>
+                                <div class="cnn-layer">
+                                    <div class="layer-label">Convolution</div>
+                                    <div class="filter-visual">
+                                        <div class="kernel">Kernel 3×3</div>
+                                        <div class="operation">*</div>
+                                    </div>
+                                </div>
+                                <div class="arrow">→</div>
+                                <div class="cnn-layer">
+                                    <div class="layer-label">Pooling</div>
+                                    <div class="pool-visual">Max Pool 2×2</div>
+                                </div>
+                                <div class="arrow">→</div>
+                                <div class="cnn-layer">
+                                    <div class="layer-label">Sortie</div>
+                                    <div class="output-visual">Classes</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="model-explanation">
+                            <h4>Opération de Convolution</h4>
+                            <p>La convolution applique un filtre (kernel) sur l'image :</p>
+                            <div class="formula">
+                                $$(I * K)[i,j] = \sum_{m=0}^{M-1} \sum_{n=0}^{N-1} I[i+m, j+n] \cdot K[m, n]$$
+                            </div>
+                            <p>Où $I$ est l'image d'entrée et $K$ est le kernel de taille $M \times N$.</p>
+                            <h4>Pooling (Réduction)</h4>
+                            <p>Le pooling réduit la dimensionnalité :</p>
+                            <div class="formula">
+                                $$\text{MaxPool}(x) = \max_{i,j \in \text{fenêtre}} x[i,j]$$
+                            </div>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- RNN/LSTM -->
+                <article class="model-card">
+                    <div class="model-header">
+                        <h3>3. Réseaux Récurrents (RNN/LSTM)</h3>
+                        <span class="model-badge">Séquentiel</span>
+                    </div>
+                    <div class="model-content">
+                        <div class="model-visualization">
+                            <canvas id="rnnChart"></canvas>
+                        </div>
+                        <div class="model-explanation">
+                            <h4>Cellule LSTM</h4>
+                            <p>Les LSTM (Long Short-Term Memory) gèrent la mémoire à long terme :</p>
+                            <div class="formula">
+                                $$f_t = \sigma(W_f \cdot [h_{t-1}, x_t] + b_f)$$
+                                $$i_t = \sigma(W_i \cdot [h_{t-1}, x_t] + b_i)$$
+                                $$\tilde{C}_t = \tanh(W_C \cdot [h_{t-1}, x_t] + b_C)$$
+                                $$C_t = f_t * C_{t-1} + i_t * \tilde{C}_t$$
+                                $$o_t = \sigma(W_o \cdot [h_{t-1}, x_t] + b_o)$$
+                                $$h_t = o_t * \tanh(C_t)$$
+                            </div>
+                            <p>Où $f_t$ (forget gate), $i_t$ (input gate), $o_t$ (output gate) contrôlent le flux d'information.</p>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- Transformers -->
+                <article class="model-card">
+                    <div class="model-header">
+                        <h3>4. Transformers & Attention</h3>
+                        <span class="model-badge">Moderne</span>
+                    </div>
+                    <div class="model-content">
+                        <div class="model-visualization">
+                            <div class="transformer-visual">
+                                <div class="transformer-block">
+                                    <div class="attention-head">Multi-Head Attention</div>
+                                    <div class="attention-formula">
+                                        $$\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V$$
+                                    </div>
+                                </div>
+                                <div class="transformer-block">
+                                    <div class="feed-forward">Feed Forward</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="model-explanation">
+                            <h4>Mécanisme d'Attention</h4>
+                            <p>L'attention permet au modèle de se concentrer sur les parties pertinentes :</p>
+                            <div class="formula">
+                                $$\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V$$
+                            </div>
+                            <p>Où :</p>
+                            <ul class="math-list">
+                                <li>$Q$ (Query) : ce qu'on cherche</li>
+                                <li>$K$ (Key) : ce qui est disponible</li>
+                                <li>$V$ (Value) : l'information réelle</li>
+                                <li>$d_k$ : dimension pour la normalisation</li>
+                            </ul>
+                            <h4>Architecture Transformer</h4>
+                            <p>Les transformers utilisent l'attention multi-têtes et des connexions résiduelles :</p>
+                            <div class="formula">
+                                $$\text{MultiHead}(Q, K, V) = \text{Concat}(\text{head}_1, ..., \text{head}_h)W^O$$
+                            </div>
+                        </div>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <!-- Section Éco-Responsabilité -->
+        <section id="eco" class="eco-section">
+            <div class="container">
+                <h2 class="section-title">IA Éco-Responsable</h2>
+                
+                <div class="eco-intro">
+                    <p class="lead">L'entraînement et l'utilisation de modèles d'IA consomment d'énormes quantités d'énergie. Comprendre et réduire cet impact est crucial.</p>
+                </div>
+
+                <div class="impact-grid">
+                    <div class="impact-card">
+                        <h3>📊 Impact Environnemental</h3>
+                        <canvas id="carbonChart"></canvas>
+                        <div class="impact-stats">
+                            <div class="impact-stat">
+                                <span class="stat-value">284,000</span>
+                                <span class="stat-unit">tonnes CO₂</span>
+                                <span class="stat-desc">GPT-3 (entraînement)</span>
+                            </div>
+                            <div class="impact-stat">
+                                <span class="stat-value">1,287</span>
+                                <span class="stat-unit">MWh</span>
+                                <span class="stat-desc">GPT-3 (entraînement)</span>
+                            </div>
+                            <div class="impact-stat">
+                                <span class="stat-value">552</span>
+                                <span class="stat-unit">tonnes CO₂</span>
+                                <span class="stat-desc">GPT-3 (inférence/an)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="impact-card">
+                        <h3>💡 Solutions Éco-Responsables</h3>
+                        <div class="solutions-list">
+                            <div class="solution-item">
+                                <div class="solution-icon">🎯</div>
+                                <div class="solution-content">
+                                    <h4>Modèles Plus Petits</h4>
+                                    <p>Utiliser des modèles quantifiés, distillés ou spécialisés plutôt que des modèles géants pour toutes les tâches.</p>
+                                    <div class="solution-math">
+                                        Réduction : $E_{\text{petit}} \approx 0.1 \times E_{\text{grand}}$
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="solution-item">
+                                <div class="solution-icon">⚡</div>
+                                <div class="solution-content">
+                                    <h4>Hardware Optimisé</h4>
+                                    <p>Utiliser des TPU, GPU spécialisés (A100, H100) et des processeurs neuromorphiques.</p>
+                                    <div class="solution-math">
+                                        Efficacité : $\text{TOPS/W} \uparrow 10\times$
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="solution-item">
+                                <div class="solution-icon">🌱</div>
+                                <div class="solution-content">
+                                    <h4>Énergie Renouvelable</h4>
+                                    <p>Entraîner et déployer sur des centres de données alimentés par énergies renouvelables.</p>
+                                </div>
+                            </div>
+                            <div class="solution-item">
+                                <div class="solution-icon">🔄</div>
+                                <div class="solution-content">
+                                    <h4>Fine-Tuning vs Pre-training</h4>
+                                    <p>Fine-tuner des modèles pré-entraînés plutôt que d'entraîner from scratch.</p>
+                                    <div class="solution-math">
+                                        Économie : $E_{\text{fine-tune}} \ll E_{\text{pre-train}}$
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="solution-item">
+                                <div class="solution-icon">📉</div>
+                                <div class="solution-content">
+                                    <h4>Quantification & Pruning</h4>
+                                    <p>Réduire la précision (FP16, INT8) et supprimer les poids inutiles.</p>
+                                    <div class="solution-math">
+                                        Compression : $\text{taille} \downarrow 4\times$, $\text{énergie} \downarrow 2-4\times$
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="comparison-section">
+                    <h3>Comparaison des Modèles</h3>
+                    <canvas id="modelComparisonChart"></canvas>
+                </div>
+
+                <div class="best-practices">
+                    <h3>🎯 Bonnes Pratiques</h3>
+                    <div class="practices-grid">
+                        <div class="practice-card">
+                            <h4>1. Évaluer le Besoin</h4>
+                            <p>Ai-je vraiment besoin d'un modèle géant ? Un modèle plus petit peut suffire.</p>
+                        </div>
+                        <div class="practice-card">
+                            <h4>2. Réutiliser les Modèles</h4>
+                            <p>Utiliser des modèles pré-entraînés et les adapter plutôt que de créer de zéro.</p>
+                        </div>
+                        <div class="practice-card">
+                            <h4>3. Monitoring</h4>
+                            <p>Mesurer la consommation énergétique et l'optimiser continuellement.</p>
+                        </div>
+                        <div class="practice-card">
+                            <h4>4. Cache & Optimisation</h4>
+                            <p>Mettre en cache les résultats fréquents et optimiser les requêtes.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section LLM & Données -->
+        <section id="llm" class="llm-section">
+            <div class="container">
+                <h2 class="section-title">LLM & Collecte de Données</h2>
+
+                <div class="llm-intro">
+                    <p class="lead">Les Large Language Models (LLM) comme GPT, Claude, LLaMA transforment notre rapport à l'information, mais soulèvent des questions cruciales sur les données.</p>
+                </div>
+
+                <div class="llm-content">
+                    <article class="llm-card">
+                        <h3>📚 Qui Collecte les Données ?</h3>
+                        <div class="data-sources">
+                            <div class="source-item">
+                                <div class="source-header">
+                                    <span class="source-name">OpenAI (GPT)</span>
+                                    <span class="source-badge">Propriétaire</span>
+                                </div>
+                                <ul>
+                                    <li>Web scraping massif (Common Crawl, Reddit, Wikipedia)</li>
+                                    <li>Livres numérisés</li>
+                                    <li>Code source (GitHub)</li>
+                                    <li>Données sous licence</li>
+                                </ul>
+                                <div class="data-volume">~45 TB de données textuelles</div>
+                            </div>
+                            <div class="source-item">
+                                <div class="source-header">
+                                    <span class="source-name">Anthropic (Claude)</span>
+                                    <span class="source-badge">Propriétaire</span>
+                                </div>
+                                <ul>
+                                    <li>Curated datasets (sélection plus stricte)</li>
+                                    <li>Constitutional AI (entraînement éthique)</li>
+                                    <li>Moins de données, meilleure qualité</li>
+                                </ul>
+                            </div>
+                            <div class="source-item">
+                                <div class="source-header">
+                                    <span class="source-name">Meta (LLaMA)</span>
+                                    <span class="source-badge">Open Source</span>
+                                </div>
+                                <ul>
+                                    <li>Common Crawl filtré</li>
+                                    <li>C4 (Colossal Clean Crawled Corpus)</li>
+                                    <li>Wikipedia, livres, code</li>
+                                </ul>
+                            </div>
+                            <div class="source-item">
+                                <div class="source-header">
+                                    <span class="source-name">Google (PaLM, Gemini)</span>
+                                    <span class="source-badge">Propriétaire</span>
+                                </div>
+                                <ul>
+                                    <li>Données Google (recherche, YouTube, etc.)</li>
+                                    <li>Web scraping</li>
+                                    <li>Données multimodales (texte, images, vidéo)</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </article>
+
+                    <article class="llm-card">
+                        <h3>🔍 Problèmes de Collecte</h3>
+                        <div class="problems-list">
+                            <div class="problem-item">
+                                <h4>1. Consentement & Propriété</h4>
+                                <p>Les données sont collectées sans consentement explicite des créateurs. Les contenus protégés par copyright sont utilisés.</p>
+                                <div class="problem-impact">
+                                    <strong>Impact :</strong> Procès en cours (New York Times vs OpenAI, auteurs, artistes)
+                                </div>
+                            </div>
+                            <div class="problem-item">
+                                <h4>2. Biais & Représentation</h4>
+                                <p>Les données reflètent les biais du web : sur-représentation de certaines langues, cultures, perspectives.</p>
+                                <div class="problem-math">
+                                    Distribution : $P(\text{anglais}) \gg P(\text{autres langues})$
+                                </div>
+                            </div>
+                            <div class="problem-item">
+                                <h4>3. Qualité vs Quantité</h4>
+                                <p>Beaucoup de données de faible qualité polluent les modèles. La curation est cruciale.</p>
+                                <div class="problem-math">
+                                    Qualité : $\text{Score} = \frac{\text{Données curées}}{\text{Données totales}} \times \text{Qualité moyenne}$
+                                </div>
+                            </div>
+                            <div class="problem-item">
+                                <h4>4. Vie Privée</h4>
+                                <p>Informations personnelles, conversations privées peuvent être dans les datasets.</p>
+                            </div>
+                        </div>
+                    </article>
+
+                    <article class="llm-card">
+                        <h3>🌱 Solutions Éco-Responsables pour LLM</h3>
+                        <div class="llm-solutions">
+                            <div class="llm-solution">
+                                <h4>1. Modèles Plus Efficaces</h4>
+                                <p>Utiliser des architectures optimisées (LLaMA, Mistral) plutôt que GPT-3/4 pour la plupart des tâches.</p>
+                                <canvas id="llmEfficiencyChart"></canvas>
+                            </div>
+                            <div class="llm-solution">
+                                <h4>2. Quantification</h4>
+                                <p>Réduire la précision des poids (INT8, INT4) peut réduire l'empreinte de 2-4× avec peu de perte de qualité.</p>
+                                <div class="formula">
+                                    $$\text{Économie} = \frac{E_{\text{FP32}} - E_{\text{INT8}}}{E_{\text{FP32}}} \approx 75\%$$
+                                </div>
+                            </div>
+                            <div class="llm-solution">
+                                <h4>3. Données Curées</h4>
+                                <p>Moins de données mais de meilleure qualité = meilleur modèle avec moins d'entraînement.</p>
+                                <div class="formula">
+                                    $$\text{Efficacité} = \frac{\text{Performance}}{\text{Données} \times \text{Énergie}}$$
+                                </div>
+                            </div>
+                            <div class="llm-solution">
+                                <h4>4. Fine-Tuning Ciblé</h4>
+                                <p>Au lieu de réentraîner, fine-tuner sur des tâches spécifiques avec LoRA, QLoRA.</p>
+                                <div class="formula">
+                                    $$E_{\text{LoRA}} \approx 0.01 \times E_{\text{full fine-tune}}$$
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+
+                    <article class="llm-card">
+                        <h3>📊 Impact des LLM</h3>
+                        <div class="impact-visualization">
+                            <canvas id="llmImpactChart"></canvas>
+                        </div>
+                        <div class="impact-breakdown">
+                            <div class="breakdown-item">
+                                <span class="breakdown-label">Entraînement</span>
+                                <div class="breakdown-bar">
+                                    <div class="breakdown-fill" style="width: 80%"></div>
+                                </div>
+                                <span class="breakdown-value">80%</span>
+                            </div>
+                            <div class="breakdown-item">
+                                <span class="breakdown-label">Inférence</span>
+                                <div class="breakdown-bar">
+                                    <div class="breakdown-fill" style="width: 20%"></div>
+                                </div>
+                                <span class="breakdown-value">20%</span>
+                            </div>
+                        </div>
+                        <p class="impact-note">Note : L'inférence représente une part croissante avec l'adoption massive des LLM.</p>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section Conclusion -->
+        <section class="conclusion-section">
+            <div class="container">
+                <h2 class="section-title">Conclusion</h2>
+                <div class="conclusion-content">
+                    <p>L'intelligence artificielle est puissante mais coûteuse en énergie. En comprenant les modèles mathématiques et en adoptant des pratiques éco-responsables, nous pouvons réduire significativement l'impact environnemental.</p>
+                    <div class="key-takeaways">
+                        <h3>Points Clés</h3>
+                        <ul>
+                            <li>✅ Utiliser des modèles adaptés à la tâche (pas toujours le plus grand)</li>
+                            <li>✅ Réutiliser et fine-tuner plutôt que d'entraîner from scratch</li>
+                            <li>✅ Quantifier et optimiser les modèles</li>
+                            <li>✅ Choisir des infrastructures alimentées par énergies renouvelables</li>
+                            <li>✅ Mesurer et monitorer la consommation énergétique</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 - Documentation IA Éco-Responsable</p>
+            <p>Fait avec 💚 pour un avenir plus durable</p>
+        </div>
+    </footer>
+
+    <script src="../../js/ia-eco-responsable/visualizations.js"></script>
+    <script src="../../js/ia-eco-responsable/animations.js"></script>
+</body>
+</html>
+

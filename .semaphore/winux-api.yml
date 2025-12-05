@@ -1,0 +1,328 @@
+---
+- name: Déployer l'API Winux dans un container Docker
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    container_id: "{{ container_id | default(30000) }}"
+    github_repo: "Bros-Insanity/nuit-info-2025"
+    github_branch: "{{ github_branch | default('winux-nodejs') }}"
+    deploy_dir: "/opt/winux-api"
+    container_name: "winux-api"
+
+  tasks:
+    - name: Créer le fichier de clé SSH depuis l'environnement
+      copy:
+        content: "{{ proxmox_ssh_private_key }}"
+        dest: "/tmp/proxmox_ssh_key"
+        mode: '0600'
+      when: proxmox_ssh_private_key is defined
+      ignore_errors: yes
+      no_log: true
+
+    - name: Valider la clé SSH
+      command: ssh-keygen -l -f /tmp/proxmox_ssh_key
+      register: key_validation
+      ignore_errors: yes
+      changed_when: false
+      when: proxmox_ssh_private_key is defined
+
+    - name: Afficher le résultat de validation
+      debug:
+        msg: "Key validation: {{ key_validation.stdout if key_validation.rc == 0 else 'INVALID - ' + key_validation.stderr }}"
+      when: proxmox_ssh_private_key is defined
+
+    - name: Tester la connexion SSH à Proxmox
+      shell: |
+        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} \
+            -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=5 \
+            root@{{ proxmox_api_host }} "echo 'SSH OK'"
+      register: ssh_test
+      ignore_errors: yes
+      changed_when: false
+      when: proxmox_ssh_private_key is defined
+
+    - name: Afficher le résultat du test SSH
+      debug:
+        msg: "SSH test result: {{ ssh_test.stdout if (ssh_test.rc == 0 and proxmox_ssh_private_key is defined) else 'SSH key not configured or connection failed' }}"
+      when: proxmox_ssh_private_key is defined
+
+    - name: Vérifier que Docker est installé dans le container
+      shell: |
+        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} \
+            -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=10 \
+            root@{{ proxmox_api_host }} \
+            "pct exec {{ container_id }} -- docker --version"
+      register: docker_version
+      ignore_errors: yes
+      changed_when: false
+      when: proxmox_ssh_private_key is defined
+
+    - name: Installer Docker dans le container si nécessaire
+      block:
+        - name: Installer les dépendances pour Docker
+          shell: |
+            ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} \
+                -o StrictHostKeyChecking=no \
+                -o ConnectTimeout=10 \
+                root@{{ proxmox_api_host }} \
+                "pct exec {{ container_id }} -- bash -c 'export DEBIAN_FRONTEND=noninteractive && apt-get update && apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-release'"
+          register: install_docker_deps
+          ignore_errors: yes
+          changed_when: install_docker_deps.rc == 0
+          when: proxmox_ssh_private_key is defined
+
+        - name: Ajouter la clé GPG de Docker
+          shell: |
+            ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} \
+                -o StrictHostKeyChecking=no \
+                -o ConnectTimeout=10 \
+                root@{{ proxmox_api_host }} \
+                "pct exec {{ container_id }} -- bash -c 'curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg'"
+          register: add_docker_key
+          ignore_errors: yes
+          changed_when: add_docker_key.rc == 0
+          when: install_docker_deps.rc == 0 and proxmox_ssh_private_key is defined
+
+        - name: Ajouter le repository Docker
+          shell: |
+            ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} \
+                -o StrictHostKeyChecking=no \
+                -o ConnectTimeout=10 \
+                root@{{ proxmox_api_host }} \
+                "pct exec {{ container_id }} -- bash -c 'echo \"deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian $(lsb_release -cs) stable\" > /etc/apt/sources.list.d/docker.list'"
+          register: add_docker_repo
+          ignore_errors: yes
+          changed_when: add_docker_repo.rc == 0
+          when: add_docker_key.rc == 0 and proxmox_ssh_private_key is defined
+
+        - name: Installer Docker
+          shell: |
+            ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} \
+                -o StrictHostKeyChecking=no \
+                -o ConnectTimeout=10 \
+                root@{{ proxmox_api_host }} \
+                "pct exec {{ container_id }} -- bash -c 'export DEBIAN_FRONTEND=noninteractive && apt-get update && apt-get install -y docker-ce docker-ce-cli containerd.io'"
+          register: install_docker
+          ignore_errors: yes
+          changed_when: install_docker.rc == 0
+          when: add_docker_repo.rc == 0 and proxmox_ssh_private_key is defined
+
+        - name: Démarrer Docker
+          shell: |
+            ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} \
+                -o StrictHostKeyChecking=no \
+                -o ConnectTimeout=10 \
+                root@{{ proxmox_api_host }} \
+                "pct exec {{ container_id }} -- systemctl enable --now docker"
+          register: start_docker
+          ignore_errors: yes
+          changed_when: start_docker.rc == 0
+          when: install_docker.rc == 0 and proxmox_ssh_private_key is defined
+      when: docker_version.rc != 0 and proxmox_ssh_private_key is defined
+
+    - name: Vérifier que Docker Compose est installé
+      shell: |
+        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} \
+            -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=10 \
+            root@{{ proxmox_api_host }} \
+            "pct exec {{ container_id }} -- docker compose version"
+      register: docker_compose_version
+      ignore_errors: yes
+      changed_when: false
+      when: proxmox_ssh_private_key is defined
+
+    - name: Installer Docker Compose si nécessaire
+      block:
+        - name: Télécharger Docker Compose
+          shell: |
+            ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} \
+                -o StrictHostKeyChecking=no \
+                -o ConnectTimeout=10 \
+                root@{{ proxmox_api_host }} \
+                "pct exec {{ container_id }} -- bash -c 'curl -L \"https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64\" -o /usr/local/bin/docker-compose && chmod +x /usr/local/bin/docker-compose && ln -sf /usr/local/bin/docker-compose /usr/bin/docker-compose'"
+          register: install_compose
+          ignore_errors: yes
+          changed_when: install_compose.rc == 0
+          when: proxmox_ssh_private_key is defined
+      when: docker_compose_version.rc != 0 and proxmox_ssh_private_key is defined
+
+    - name: Cloner le repository dans le container
+      shell: |
+        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} \
+            -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=10 \
+            root@{{ proxmox_api_host }} \
+            "pct exec {{ container_id }} -- bash -c 'cd /tmp && rm -rf nuit-info-2025 && git clone --depth 1 --branch {{ github_branch }} https://github.com/{{ github_repo }}.git'"
+      register: clone_repo
+      ignore_errors: yes
+      changed_when: clone_repo.rc == 0
+      when: proxmox_ssh_private_key is defined
+
+    - name: Créer le répertoire de déploiement
+      shell: |
+        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} \
+            -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=10 \
+            root@{{ proxmox_api_host }} \
+            "pct exec {{ container_id }} -- bash -c 'mkdir -p {{ deploy_dir }} && chmod 755 {{ deploy_dir }}'"
+      register: create_deploy_dir
+      ignore_errors: yes
+      changed_when: create_deploy_dir.rc == 0
+      when: clone_repo.rc == 0 and proxmox_ssh_private_key is defined
+
+    - name: Copier les fichiers nécessaires dans le container
+      shell: |
+        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} \
+            -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=10 \
+            root@{{ proxmox_api_host }} \
+            "pct exec {{ container_id }} -- bash -c 'cp /tmp/nuit-info-2025/Dockerfile {{ deploy_dir }}/ && cp /tmp/nuit-info-2025/docker-compose.yml {{ deploy_dir }}/ && cp /tmp/nuit-info-2025/api_winux.js {{ deploy_dir }}/ && cp /tmp/nuit-info-2025/package.json {{ deploy_dir }}/ && chmod +x {{ deploy_dir }}/api_winux.js && chmod 644 {{ deploy_dir }}/*.yml {{ deploy_dir }}/*.json'"
+      register: copy_files
+      ignore_errors: yes
+      changed_when: copy_files.rc == 0
+      when: create_deploy_dir.rc == 0 and proxmox_ssh_private_key is defined
+
+    - name: Arrêter et supprimer l'ancien container s'il existe
+      shell: |
+        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} \
+            -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=10 \
+            root@{{ proxmox_api_host }} \
+            "pct exec {{ container_id }} -- bash -c 'cd {{ deploy_dir }} && docker-compose down 2>/dev/null || true && docker rm -f {{ container_name }} 2>/dev/null || true'"
+      register: stop_old_container
+      ignore_errors: yes
+      changed_when: false
+      when: copy_files.rc == 0 and proxmox_ssh_private_key is defined
+
+    - name: Construire l'image Docker
+      shell: |
+        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} \
+            -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=10 \
+            root@{{ proxmox_api_host }} \
+            "pct exec {{ container_id }} -- bash -c 'cd {{ deploy_dir }} && docker-compose build'"
+      register: build_result
+      ignore_errors: yes
+      changed_when: build_result.rc == 0
+      when: stop_old_container is defined and proxmox_ssh_private_key is defined
+
+    - name: Démarrer le container Docker
+      shell: |
+        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} \
+            -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=10 \
+            root@{{ proxmox_api_host }} \
+            "pct exec {{ container_id }} -- bash -c 'cd {{ deploy_dir }} && docker-compose up -d'"
+      register: start_result
+      ignore_errors: yes
+      changed_when: start_result.rc == 0
+      when: build_result.rc == 0 and proxmox_ssh_private_key is defined
+
+    - name: Attendre que le container soit prêt
+      pause:
+        seconds: 5
+      when: start_result.rc == 0
+
+    - name: Vérifier que le container tourne
+      shell: |
+        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} \
+            -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=10 \
+            root@{{ proxmox_api_host }} \
+            "pct exec {{ container_id }} -- docker ps | grep {{ container_name }}"
+      register: container_status
+      ignore_errors: yes
+      changed_when: false
+      when: start_result.rc == 0 and proxmox_ssh_private_key is defined
+
+    - name: Tester l'endpoint de santé
+      shell: |
+        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} \
+            -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=10 \
+            root@{{ proxmox_api_host }} \
+            "pct exec {{ container_id }} -- bash -c 'curl -f http://localhost:5000/api/winux/health || wget -q -O- http://localhost:5000/api/winux/health'"
+      register: health_check
+      ignore_errors: yes
+      changed_when: false
+      when: container_status.rc == 0 and proxmox_ssh_private_key is defined
+
+    - name: Vérifier que nginx est installé
+      shell: |
+        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} \
+            -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=10 \
+            root@{{ proxmox_api_host }} \
+            "pct exec {{ container_id }} -- nginx -v"
+      register: nginx_version
+      ignore_errors: yes
+      changed_when: false
+      when: health_check.rc == 0 and proxmox_ssh_private_key is defined
+
+    - name: Installer nginx si nécessaire
+      shell: |
+        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} \
+            -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=10 \
+            root@{{ proxmox_api_host }} \
+            "pct exec {{ container_id }} -- bash -c 'export DEBIAN_FRONTEND=noninteractive && apt-get update && apt-get install -y nginx'"
+      register: install_nginx
+      ignore_errors: yes
+      changed_when: install_nginx.rc == 0
+      when: nginx_version.rc != 0 and proxmox_ssh_private_key is defined
+
+    - name: Configurer nginx pour proxy vers l'API Winux
+      shell: |
+        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} \
+            -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=10 \
+            root@{{ proxmox_api_host }} \
+            "pct exec {{ container_id }} -- bash -c 'printf \"server {\\n    listen 80 default_server;\\n    listen [::]:80 default_server;\\n    root /var/www/html;\\n    index index.html;\\n    server_name _;\\n    location / {\\n        try_files \\\\\$uri \\\\\$uri/ =404;\\n    }\\n    location /api/winux {\\n        proxy_pass http://localhost:5000;\\n        proxy_set_header Host \\\\\$host;\\n        proxy_set_header X-Real-IP \\\\\$remote_addr;\\n        proxy_set_header X-Forwarded-For \\\\\$proxy_add_x_forwarded_for;\\n        proxy_set_header X-Forwarded-Proto \\\\\$scheme;\\n        proxy_connect_timeout 60s;\\n        proxy_send_timeout 60s;\\n        proxy_read_timeout 60s;\\n    }\\n    location /winux {\\n        alias /var/www/html/winux;\\n        try_files \\\\\$uri \\\\\$uri/ /winux/index.html;\\n    }\\n}\" > /etc/nginx/sites-available/default && rm -f /etc/nginx/sites-enabled/default && ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default && nginx -t && systemctl reload nginx'"
+      register: configure_nginx
+      ignore_errors: yes
+      changed_when: configure_nginx.rc == 0
+      when: (nginx_version.rc == 0 or install_nginx.rc == 0) and proxmox_ssh_private_key is defined
+
+    - name: Démarrer nginx si nécessaire
+      shell: |
+        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} \
+            -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=10 \
+            root@{{ proxmox_api_host }} \
+            "pct exec {{ container_id }} -- systemctl enable --now nginx"
+      register: start_nginx
+      ignore_errors: yes
+      changed_when: start_nginx.rc == 0
+      when: configure_nginx.rc == 0 and proxmox_ssh_private_key is defined
+
+    - name: Afficher le résultat
+      debug:
+        msg: |
+          ============================================
+          Déploiement de l'API Winux Docker terminé
+          ============================================
+          Container ID: {{ container_id }}
+          Répertoire: {{ deploy_dir }}
+          Container Docker: {{ container_name }}
+          API accessible sur: http://localhost:5000/api/winux
+          ============================================
+          {% if start_result.rc == 0 %}
+          Le container Docker a été démarré avec succès.
+          {% if health_check.rc == 0 %}
+          Health check: ✅ OK
+          {% else %}
+          Health check: ⚠️ Non disponible (le container démarre peut-être encore)
+          {% endif %}
+          {% if configure_nginx.rc == 0 %}
+          Nginx configuré avec proxy vers /api/winux ✅
+          {% else %}
+          Note: Configuration nginx non effectuée
+          {% endif %}
+          {% else %}
+          Note: Le déploiement nécessite un accès SSH au serveur Proxmox ({{ proxmox_api_host }})
+          {% endif %}

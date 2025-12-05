@@ -1,0 +1,62 @@
+---
+- name: Détruire une session Winux temporaire
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    container_id: "{{ container_id | required }}"
+
+  tasks:
+    - name: Vérifier si le container existe
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/lxc/{{ container_id }}/status/current"
+        method: GET
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
+        validate_certs: no
+        status_code: [200, 500]
+      register: container_check
+      ignore_errors: yes
+
+    - name: Arrêter le container s'il est en cours d'exécution
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/lxc/{{ container_id }}/status/stop"
+        method: POST
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
+        validate_certs: no
+        status_code: [200, 202, 500]
+      when: container_check.status == 200
+      ignore_errors: yes
+
+    - name: Attendre l'arrêt du container
+      pause:
+        seconds: 5
+      when: container_check.status == 200
+
+    - name: Supprimer le container
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/lxc/{{ container_id }}"
+        method: DELETE
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
+        validate_certs: no
+        status_code: [200, 202, 500]
+      when: container_check.status == 200
+      ignore_errors: yes
+
+    - name: Afficher le résultat de la suppression
+      debug:
+        msg: |
+          ============================================
+          Session Winux supprimée avec succès !
+          ============================================
+          Container ID: {{ container_id }}
+          ============================================
+      when: container_check.status == 200
+
+    - name: Afficher un message si le container n'existe pas
+      debug:
+        msg: "Le container {{ container_id }} n'existe pas ou a déjà été supprimé."
+      when: container_check.status != 200

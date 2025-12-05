@@ -1,0 +1,32 @@
+{
+  "name": "winux-api",
+  "version": "1.0.0",
+  "description": "API Winux - Backend Node.js/Express pour gérer les sessions Winux temporaires",
+  "main": "api_winux.js",
+  "scripts": {
+    "start": "node api_winux.js",
+    "dev": "nodemon api_winux.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "winux",
+    "api",
+    "express",
+    "sessions"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "engines": {
+    "node": ">=14.0.0",
+    "npm": ">=6.0.0"
+  }
+}
+
