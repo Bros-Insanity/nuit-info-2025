@@ -252,6 +252,54 @@
       changed_when: false
       when: container_status.rc == 0 and proxmox_ssh_private_key is defined
 
+    - name: Vérifier que nginx est installé
+      shell: |
+        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} \
+            -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=10 \
+            root@{{ proxmox_api_host }} \
+            "pct exec {{ container_id }} -- nginx -v"
+      register: nginx_version
+      ignore_errors: yes
+      changed_when: false
+      when: health_check.rc == 0 and proxmox_ssh_private_key is defined
+
+    - name: Installer nginx si nécessaire
+      shell: |
+        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} \
+            -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=10 \
+            root@{{ proxmox_api_host }} \
+            "pct exec {{ container_id }} -- bash -c 'export DEBIAN_FRONTEND=noninteractive && apt-get update && apt-get install -y nginx'"
+      register: install_nginx
+      ignore_errors: yes
+      changed_when: install_nginx.rc == 0
+      when: nginx_version.rc != 0 and proxmox_ssh_private_key is defined
+
+    - name: Configurer nginx pour proxy vers l'API Winux
+      shell: |
+        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} \
+            -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=10 \
+            root@{{ proxmox_api_host }} \
+            "pct exec {{ container_id }} -- bash -c 'printf \"server {\\n    listen 80 default_server;\\n    listen [::]:80 default_server;\\n    root /var/www/html;\\n    index index.html;\\n    server_name _;\\n    location / {\\n        try_files \\\\\$uri \\\\\$uri/ =404;\\n    }\\n    location /api/winux {\\n        proxy_pass http://localhost:5000;\\n        proxy_set_header Host \\\\\$host;\\n        proxy_set_header X-Real-IP \\\\\$remote_addr;\\n        proxy_set_header X-Forwarded-For \\\\\$proxy_add_x_forwarded_for;\\n        proxy_set_header X-Forwarded-Proto \\\\\$scheme;\\n        proxy_connect_timeout 60s;\\n        proxy_send_timeout 60s;\\n        proxy_read_timeout 60s;\\n    }\\n    location /winux {\\n        alias /var/www/html/winux;\\n        try_files \\\\\$uri \\\\\$uri/ /winux/index.html;\\n    }\\n}\" > /etc/nginx/sites-available/default && rm -f /etc/nginx/sites-enabled/default && ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default && nginx -t && systemctl reload nginx'"
+      register: configure_nginx
+      ignore_errors: yes
+      changed_when: configure_nginx.rc == 0
+      when: (nginx_version.rc == 0 or install_nginx.rc == 0) and proxmox_ssh_private_key is defined
+
+    - name: Démarrer nginx si nécessaire
+      shell: |
+        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} \
+            -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=10 \
+            root@{{ proxmox_api_host }} \
+            "pct exec {{ container_id }} -- systemctl enable --now nginx"
+      register: start_nginx
+      ignore_errors: yes
+      changed_when: start_nginx.rc == 0
+      when: configure_nginx.rc == 0 and proxmox_ssh_private_key is defined
+
     - name: Afficher le résultat
       debug:
         msg: |
@@ -269,6 +317,11 @@
           Health check: ✅ OK
           {% else %}
           Health check: ⚠️ Non disponible (le container démarre peut-être encore)
+          {% endif %}
+          {% if configure_nginx.rc == 0 %}
+          Nginx configuré avec proxy vers /api/winux ✅
+          {% else %}
+          Note: Configuration nginx non effectuée
           {% endif %}
           {% else %}
           Note: Le déploiement nécessite un accès SSH au serveur Proxmox ({{ proxmox_api_host }})
