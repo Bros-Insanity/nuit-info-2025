@@ -199,32 +199,35 @@
             -o StrictHostKeyChecking=no \
             -o ConnectTimeout=10 \
             root@{{ proxmox_api_host }} \
-            "pct exec {{ container_id }} -- bash -c 'echo \"server {\" > /etc/nginx/sites-available/default && \
-            echo \"    listen 80 default_server;\" >> /etc/nginx/sites-available/default && \
-            echo \"    listen [::]:80 default_server;\" >> /etc/nginx/sites-available/default && \
-            echo \"    root /var/www/html;\" >> /etc/nginx/sites-available/default && \
-            echo \"    index index.html;\" >> /etc/nginx/sites-available/default && \
-            echo \"    server_name _;\" >> /etc/nginx/sites-available/default && \
-            echo \"    location / {\" >> /etc/nginx/sites-available/default && \
-            echo \"        try_files \\\\\$uri \\\\\$uri/ =404;\" >> /etc/nginx/sites-available/default && \
-            echo \"    }\" >> /etc/nginx/sites-available/default && \
-            echo \"    location /api/winux {\" >> /etc/nginx/sites-available/default && \
-            echo \"        proxy_pass http://localhost:5000;\" >> /etc/nginx/sites-available/default && \
-            echo \"        proxy_set_header Host \\\\\$host;\" >> /etc/nginx/sites-available/default && \
-            echo \"        proxy_set_header X-Real-IP \\\\\$remote_addr;\" >> /etc/nginx/sites-available/default && \
-            echo \"        proxy_set_header X-Forwarded-For \\\\\$proxy_add_x_forwarded_for;\" >> /etc/nginx/sites-available/default && \
-            echo \"        proxy_set_header X-Forwarded-Proto \\\\\$scheme;\" >> /etc/nginx/sites-available/default && \
-            echo \"        proxy_connect_timeout 60s;\" >> /etc/nginx/sites-available/default && \
-            echo \"        proxy_send_timeout 60s;\" >> /etc/nginx/sites-available/default && \
-            echo \"        proxy_read_timeout 60s;\" >> /etc/nginx/sites-available/default && \
-            echo \"    }\" >> /etc/nginx/sites-available/default && \
-            echo \"    location /winux {\" >> /etc/nginx/sites-available/default && \
-            echo \"        alias /var/www/html/winux;\" >> /etc/nginx/sites-available/default && \
-            echo \"        try_files \\\\\$uri \\\\\$uri/ /winux/index.html;\" >> /etc/nginx/sites-available/default && \
-            echo \"    }\" >> /etc/nginx/sites-available/default && \
-            echo \"}\" >> /etc/nginx/sites-available/default && \
-            rm -f /etc/nginx/sites-enabled/default && \
-            ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default'"
+            "pct exec {{ container_id }} -- bash -c 'cat > /tmp/nginx_config << \"ENDOFFILE\"
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    root /var/www/html;
+    index index.html;
+    server_name _;
+    location / {
+        try_files \$uri \$uri/ =404;
+    }
+    location /api/winux {
+        proxy_pass http://localhost:5000;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
+    location /winux {
+        alias /var/www/html/winux;
+        try_files \$uri \$uri/ /winux/index.html;
+    }
+}
+ENDOFFILE
+mv /tmp/nginx_config /etc/nginx/sites-available/default && \
+rm -f /etc/nginx/sites-enabled/default && \
+ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default'"
       register: configure_nginx
       ignore_errors: yes
       changed_when: configure_nginx.rc == 0
