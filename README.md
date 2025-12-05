@@ -19,7 +19,9 @@ GitHub → Semaphore CI/CD → Ansible → Proxmox → Container LXC → Nginx
 Avant de commencer, tu auras besoin de :
 
 1. **Un serveur Proxmox** accessible (dans notre cas : `10.0.0.100`)
-2. **Un serveur Semaphore** installé et configuré (dans notre cas : `https://semaphore.eidontrol.dev/`)
+2. **Un serveur Ansible Semaphore** installé et configuré
+   - Si tu n'as pas encore Semaphore, consulte la [documentation officielle](https://docs.semaphoreui.com/administration-guide/installation) pour l'installer
+   - Dans notre cas : `https://semaphore.eidontrol.dev/`
 3. **Un compte GitHub** avec ce repository
 4. **Un utilisateur Proxmox** avec les permissions nécessaires (nous utilisons `terraform@pam`)
 
@@ -191,7 +193,8 @@ Le container sera recréé avec la dernière version de `test.html`.
 
 - [Documentation Proxmox API](https://pve.proxmox.com/pve-docs/api-viewer/)
 - [Documentation Ansible](https://docs.ansible.com/)
-- [Documentation Semaphore](https://docs.ansible-semaphore.com/)
+- [Documentation Ansible Semaphore](https://docs.semaphoreui.com/)
+- [GitHub Ansible Semaphore](https://github.com/ansible-semaphore/semaphore)
 
 ## 👥 Auteurs
 
