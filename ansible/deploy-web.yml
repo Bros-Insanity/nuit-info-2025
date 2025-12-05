@@ -125,6 +125,37 @@
       pause:
         seconds: 5
 
+    - name: Create hookscript on storage via API
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/storage/local/content"
+        method: POST
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
+        body_format: form-urlencoded
+        body:
+          content: "snippets"
+          filename: "init-web-{{ container_id }}.sh"
+          file: "{{ '#!/bin/bash\nif [ \"$2\" == \"post-start\" ]; then\n  sleep 10\n  pct exec $1 -- bash -c \"export DEBIAN_FRONTEND=noninteractive && apt-get update -qq && apt-get install -y nginx curl > /dev/null 2>&1 && curl -s -o /var/www/html/index.html {{ github_repo }} && systemctl enable nginx > /dev/null 2>&1 && systemctl start nginx\"\nfi' | b64encode }}"
+        validate_certs: no
+        status_code: [200, 202]
+      register: create_hookscript
+      ignore_errors: yes
+
+    - name: Configure hookscript in container
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/lxc/{{ container_id }}/config"
+        method: PUT
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
+        body_format: form-urlencoded
+        body:
+          hookscript: "local:snippets/init-web-{{ container_id }}.sh"
+        validate_certs: no
+        status_code: [200, 202]
+      register: config_hookscript
+      ignore_errors: yes
+      when: create_hookscript.rc == 0
+
     - name: Start container
       uri:
         url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/lxc/{{ container_id }}/status/start"
@@ -135,21 +166,9 @@
         status_code: [200, 202]
       register: start_result
 
-    - name: Wait for container to be ready
+    - name: Wait for hookscript to execute and nginx installation
       pause:
-        seconds: 30
-
-    - name: Install nginx and deploy via pct exec
-      shell: |
-        ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@{{ proxmox_api_host }} "pct exec {{ container_id }} -- bash -c 'export DEBIAN_FRONTEND=noninteractive && apt-get update && apt-get install -y nginx curl && curl -s -o /var/www/html/index.html {{ github_repo }} && systemctl enable --now nginx'"
-      register: install_result
-      ignore_errors: yes
-      changed_when: install_result.rc == 0
-
-    - name: Wait for nginx installation
-      pause:
-        seconds: 30
-      when: install_result.rc == 0
+        seconds: 90
 
     - name: Display deployment status
       debug:
@@ -159,10 +178,10 @@
           Gateway: {{ container_gateway }}
           DNS: {{ container_dns }}
           Web: http://10.0.0.20/
-          {% if install_result.rc == 0 %}
-          Nginx installe et test.html deploye avec succes!
+          {% if config_hookscript.status == 200 %}
+          Hookscript configure! Nginx et test.html seront installes automatiquement au demarrage.
           {% else %}
-          Note: L'installation automatique necessite un acces SSH au serveur Proxmox.
+          Note: La creation du hookscript necessite un acces SSH au serveur Proxmox.
           Depuis Proxmox (10.0.0.100), executez:
           pct exec {{ container_id }} -- bash -c 'export DEBIAN_FRONTEND=noninteractive && apt-get update && apt-get install -y nginx curl && curl -o /var/www/html/index.html {{ github_repo }} && systemctl enable --now nginx'
           {% endif %}
