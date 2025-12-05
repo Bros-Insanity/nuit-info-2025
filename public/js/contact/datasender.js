@@ -35,7 +35,11 @@ const data = {
 };
 
 
+  // Envoyer l'email
+  const emailBody = `Prénom: ${data.prenom}\nNom: ${data.nom}\nEmail: ${data.email}\nSujet: ${data.sujet}\nMessage: ${data.message}`;
+  window.location.href = `mailto:andreasmulard@gmail.com?subject=${encodeURIComponent(data.sujet || 'Formulaire de contact')}&body=${encodeURIComponent(emailBody)}`;
+  
   // convertir en query string et rediriger
   const query = new URLSearchParams(data).toString();
-  window.location.href = `message.html?${query}`;
+  setTimeout(() => window.location.href = `message.html?${query}`, 100);
 }
