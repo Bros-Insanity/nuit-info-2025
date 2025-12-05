@@ -9,7 +9,7 @@
     container_name: "ai-test"
     container_memory: 4096
     container_cores: 1
-    container_disk: 8
+    container_disk: 15
     container_ip: "10.0.0.30/24"
     container_gateway: "10.0.0.254"
     container_dns: "1.1.1.1"
