@@ -35,11 +35,14 @@ const data = {
 };
 
 
-  // Envoyer l'email
-  const emailBody = `Prénom: ${data.prenom}\nNom: ${data.nom}\nEmail: ${data.email}\nSujet: ${data.sujet}\nMessage: ${data.message}`;
-  window.location.href = `mailto:andreasmulard@gmail.com?subject=${encodeURIComponent(data.sujet || 'Formulaire de contact')}&body=${encodeURIComponent(emailBody)}`;
-  
-  // convertir en query string et rediriger
+  // Sauvegarder dans un fichier texte
+  const txtContent = `=== FORMULAIRE DE CONTACT ===\nPrénom: ${data.prenom}\nNom: ${data.nom}\nEmail: ${data.email}\nSujet: ${data.sujet}\nMessage: ${data.message}\n\n`;
+  const blob = new Blob([txtContent], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `contact_${data.nom || 'anonyme'}_${Date.now()}.txt`;
+  a.click();
   const query = new URLSearchParams(data).toString();
-  setTimeout(() => window.location.href = `message.html?${query}`, 100);
+  window.location.href = `message.html?${query}`;
 }
