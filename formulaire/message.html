@@ -50,8 +50,8 @@ function nomAvecParticule(nom) {
 }
 
 function accordeGenre(genre, base) {
-  if (genre === "femme") return base + "e";
-  if (genre === "non-binaire") return base + "·e";
+  if (genre === "Femme") return base + "e";
+  if (genre === "Non-binaire") return base + "·e";
   return base;
 }
 
@@ -70,15 +70,24 @@ const ne = accordeGenre(genre, "né");
 const aime = accordeGenre(genre1, "aimé");
 const respecte = accordeGenre(genre2, "respecté");
 const paysAvecArticle = articleDe(pays) + pays;
-const comteNom = `${prenom} ${hasParticle(nom) ? nom : "de " + nom}, comte ${residence}`;
+const titreComte = genre === "Femme" ? "comtesse" : "comte";
+const comteNom = `${prenom} ${hasParticle(nom) ? nom : "de " + nom}, ${titreComte} ${residence}`;
+const titreCher = genre === "Femme" ? "Chère" : "Cher";
 
-const message = `Cher comte ${prenom} Ier ${hasParticle(nom) ? nom : "de " + nom}, comte ${residence}, vassal du roi ${paysAvecArticle},
+function articleEtAdjectif(genre, base) {
+  if (genre === "Femme") return "de la " + base + "e";
+  if (genre === "Non-binaire") return "de la " + base + "·e";
+  return "du " + base;
+}
+
+const message = `${titreCher} ${prenom} Ier ${hasParticle(nom) ? nom : "de " + nom}, ${titreComte} ${residence}, vassal du roi ${paysAvecArticle},
 ${ne} des Terres ${naissanceVille} le ${params.get("naissanceDate")},
-fruit de l’union de l’${aime} ${parent1} et du ${respecte} ${parent2}.
+fruit de l’union de l’${aime} ${parent1} et ${articleEtAdjectif(genre2, "respecté")} ${parent2}.
 
 Par les droits conférés par le Royaume des Informaticiens, moi, Andreas Ier de Mulard,
 né sur le comté de Chambray-lès-Tours, te confirme le titre de Chevalier de la RSE,
 et la gloire qu’il incarne.`;
+
 
 document.getElementById("messageRSE").textContent = message;
 
