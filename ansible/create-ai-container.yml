@@ -14,7 +14,7 @@
     container_gateway: "10.0.0.254"
     container_dns: "1.1.1.1"
     github_repo: "Bros-Insanity/nuit-info-2025"
-    github_branch: "main"
+    github_branch: "ai_mail"
 
   tasks:
     - name: Check if container exists
@@ -160,12 +160,12 @@
       debug:
         msg: "SSH test result: {{ ssh_test.stdout if (ssh_test.rc == 0 and proxmox_ssh_private_key is defined) else 'SSH key not configured or connection failed' }}"
 
-    - name: Install nginx, curl and git via pct exec
+    - name: Install postfix, pip and git and imap via pct exec
       shell: |
-        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@{{ proxmox_api_host }} "pct exec {{ container_id }} -- bash -c 'export DEBIAN_FRONTEND=noninteractive && apt-get update && apt-get install -y nginx curl git'"
-      register: install_nginx
+        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@{{ proxmox_api_host }} "pct exec {{ container_id }} -- bash -c 'export DEBIAN_FRONTEND=noninteractive && echo \"postfix postfix/main_mailer_type select \\\"Internet Site\\\"\" | debconf-set-selections && echo \"postfix postfix/mailname string localhost\" | debconf-set-selections && apt-get update && apt-get install -y postfix && dpkg-reconfigure -f noninteractive postfix && service postfix start && sudo apt install python3-pip dovecot-imapd && sed -i \"s/^#mail_location = .*/mail_location = maildir:~\/Maildir/\" /etc/dovecot/conf.d/10-mail.conf && sed -i \"s/^#disable_plaintext_auth = yes/disable_plaintext_auth = no/\" /etc/dovecot/conf.d/10-auth.conf && sed -i \"s/^#auth_mechanisms = plain/auth_mechanisms = plain login/\" /etc/dovecot/conf.d/10-auth.conf && service dovecot restart'"
+      register: configure_postfix
       ignore_errors: yes
-      changed_when: install_nginx.rc == 0
+      changed_when: install_postfix.rc == 0
       when: proxmox_ssh_private_key is defined
 
     - name: Set default branch
@@ -174,15 +174,15 @@
 
     - name: Deploy public directory via git clone
       shell: |
-        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@{{ proxmox_api_host }} "pct exec {{ container_id }} -- bash -c 'set -e && cd /tmp && rm -rf nuit-info-2025 && git clone --depth 1 --branch {{ deploy_branch }} https://github.com/{{ github_repo }}.git && rm -rf /var/www/html/* /var/www/html/.* 2>/dev/null || true && mkdir -p /var/www/html/contact /var/www/html/diplome && cp -r nuit-info-2025/public/css /var/www/html/ && cp -r nuit-info-2025/public/js /var/www/html/ && cp -r nuit-info-2025/public/html/contact/* /var/www/html/contact/ && cp -r nuit-info-2025/public/html/diplome/* /var/www/html/diplome/ && cp nuit-info-2025/public/html/index.html /var/www/html/index.html && chown -R www-data:www-data /var/www/html && chmod -R 755 /var/www/html && echo \"=== Deployment complete ===\" && echo \"=== Files in /var/www/html ===\" && ls -la /var/www/html && echo \"=== Files in /var/www/html/contact ===\" && ls -la /var/www/html/contact && echo \"=== Files in /var/www/html/js ===\" && ls -la /var/www/html/js && rm -rf nuit-info-2025'"
+        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@{{ proxmox_api_host }} "pct exec {{ container_id }} -- bash -c 'set -e && cd /tmp && rm -rf nuit-info-2025 && git clone --depth 1 --branch {{ deploy_branch }} https://github.com/{{ github_repo }}.git && mkdir /opt/ai_script && cp nuit-info-2025/public/ai_deployment/script.py /opt/ai_script/'"
       register: deploy_files
       ignore_errors: yes
       changed_when: deploy_files.rc == 0
-      when: install_nginx.rc == 0 and proxmox_ssh_private_key is defined
+      when: install_postfix.rc == 0 and proxmox_ssh_private_key is defined
 
     - name: Verify deployed files
       shell: |
-        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@{{ proxmox_api_host }} "pct exec {{ container_id }} -- bash -c 'echo \"=== Files in /var/www/html ===\" && ls -la /var/www/html && echo \"=== Files in /var/www/html/contact ===\" && ls -la /var/www/html/contact 2>/dev/null || echo \"contact directory not found\" && echo \"=== Files in /var/www/html/diplome ===\" && ls -la /var/www/html/diplome 2>/dev/null || echo \"diplome directory not found\"'"
+        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@{{ proxmox_api_host }} "pct exec {{ container_id }} -- bash -c 'echo \"=== Files in /opt/ai_script/ ===\" && ls -la /opt/ai_script/'"
       register: verify_files
       ignore_errors: yes
       when: deploy_files.rc == 0 and proxmox_ssh_private_key is defined
@@ -192,13 +192,28 @@
         msg: "{{ verify_files.stdout if verify_files.rc == 0 else 'Verification failed' }}"
       when: verify_files.rc == 0
 
-    - name: Enable and start nginx via pct exec
+    - name: Enable and start postfix via pct exec
       shell: |
-        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@{{ proxmox_api_host }} "pct exec {{ container_id }} -- systemctl enable --now nginx"
-      register: start_nginx
+        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@{{ proxmox_api_host }} "pct exec {{ container_id }} -- systemctl enable --now postfix"
+      register: start_postfix
       ignore_errors: yes
-      changed_when: start_nginx.rc == 0
-      when: install_nginx.rc == 0 and proxmox_ssh_private_key is defined
+      changed_when: start_postfix.rc == 0
+      when: install_postfix.rc == 0 and proxmox_ssh_private_key is defined
+
+    - name: Install pip dependencies
+      shell: |
+        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@{{ proxmox_api_host }} "pct exec {{ container_id }} -- bash -c 'pip install -r /nuit-info-2025/public/ai_deployment/requirements.txt'"
+      register: pip_install
+      ignore_errors: yes
+      changed_when: start_postfix.rc == 0
+      when: verify_files.rc == 0 and proxmox_ssh_private_key is defined
+
+    - name: Créer le fichier .env sur le conteneur en une seule ligne (Shell)
+      shell: |
+        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@{{ proxmox_api_host }} "pct exec {{ container_id }} -- bash -c 'ENV_FILE=\"/opt/ai_script/.env\"; echo \"IMAP_SERVER=\\\"{{ imap_server }}\\\"\" > \"\$ENV_FILE\" && echo \"IMAP_USER=\\\"{{ imap_user }}\\\"\" >> \"\$ENV_FILE\" && echo \"IMAP_PASS=\\\"{{ imap_pass }}\\\"\" >> \"\$ENV_FILE\" && echo \"IMAP_MAILBOX=\\\"{{ imap_mailbox | default('INBOX') }}\\\"\" >> \"\$ENV_FILE\" && echo \"SMTP_SERVER=\\\"{{ smtp_server }}\\\"\" >> \"\$ENV_FILE\" && echo \"SMTP_USER=\\\"{{ smtp_user }}\\\"\" >> \"\$ENV_FILE\" && echo \"SMTP_PASS=\\\"{{ smtp_pass }}\\\"\" >> \"\$ENV_FILE\" && echo \"SMTP_PORT=\\\"{{ smtp_port | default(587) }}\\\"\" >> \"\$ENV_FILE\" && echo \"FROM_EMAIL=\\\"{{ from_email }}\\\"\" >> \"\$ENV_FILE\"'"
+      register: create_env_file_oneline
+      when: verify_files.rc == 0
+
 
     - name: Show result
       debug:
@@ -209,7 +224,7 @@
           DNS: {{ container_dns }}
           Web: http://10.0.0.20/
           {% if install_nginx.rc == 0 %}
-          Nginx installe et site web deploye avec succes!
+          Postfi installe et site web deploye avec succes!
           {% else %}
           Note: Installation nginx necessite un acces SSH au serveur Proxmox ({{ proxmox_api_host }})
           {% endif %}
