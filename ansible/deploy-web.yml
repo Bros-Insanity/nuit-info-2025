@@ -136,7 +136,7 @@
         HOOKEOF
         chmod +x /tmp/init-web-{{ container_id }}.sh
         curl -k -X POST "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/storage/local/upload" \
-          -H "Authorization: PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}" \
+          -H "Authorization: PVEAPIToken={{ root_api_user | default(proxmox_api_user) }}={{ root_api_token_secret | default(proxmox_api_token_secret) }}" \
           -F "content=snippets" \
           -F "filename=init-web-{{ container_id }}.sh" \
           -F "file=@/tmp/init-web-{{ container_id }}.sh"
@@ -149,7 +149,7 @@
         url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/lxc/{{ container_id }}/config"
         method: PUT
         headers:
-          Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
+          Authorization: "PVEAPIToken={{ root_api_user | default(proxmox_api_user) }}={{ root_api_token_secret | default(proxmox_api_token_secret) }}"
         body_format: form-urlencoded
         body:
           hookscript: "local:snippets/init-web-{{ container_id }}.sh"
