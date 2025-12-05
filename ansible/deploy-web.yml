@@ -16,7 +16,6 @@
     github_repo: "https://raw.githubusercontent.com/Bros-Insanity/nuit-info-2025/formulaire/test.html"
 
   tasks:
-    # --- Suppression du container existant si present ---
     - name: Check if container exists
       uri:
         url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/lxc/{{ container_id }}/status/current"
@@ -60,7 +59,6 @@
         seconds: 5
       when: container_check.status == 200
 
-    # --- Telechargement du template Debian standard ---
     - name: Get current templates on storage
       uri:
         url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/storage/local/content"
@@ -100,7 +98,6 @@
         existing_template:
           volid: "local:vztmpl/debian-12-standard_12.7-1_amd64.tar.zst"
 
-    # --- Creation du container avec IP fixe ---
     - name: Create LXC container with static IP
       uri:
         url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/lxc"
@@ -128,9 +125,6 @@
       pause:
         seconds: 5
 
-    # --- Demarrage du container ---
-    # Note: Pour installer nginx automatiquement, on utilise pct exec qui necessite SSH vers Proxmox
-    # Sans SSH, le container sera cree mais nginx devra etre installe manuellement
     - name: Start container
       uri:
         url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/lxc/{{ container_id }}/status/start"
@@ -145,8 +139,6 @@
       pause:
         seconds: 30
 
-    # --- Installation via pct exec (necessite SSH vers Proxmox) ---
-    # Sans SSH, cette etape echouera mais on affichera les instructions
     - name: Install nginx and deploy via pct exec
       shell: |
         ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@{{ proxmox_api_host }} "pct exec {{ container_id }} -- bash -c 'export DEBIAN_FRONTEND=noninteractive && apt-get update && apt-get install -y nginx curl && curl -s -o /var/www/html/index.html {{ github_repo }} && systemctl enable --now nginx'"
