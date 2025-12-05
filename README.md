@@ -1,6 +1,6 @@
 # Nuit de l'Info 2025 - Projet Complet
 
-Projet développé dans le cadre de la Nuit de l'Info 2025 par **Bros Insanity**. Ce projet comprend plusieurs composants : déploiement automatisé, API Winux, documentation IA éco-responsable, et système de gestion de sessions temporaires.
+Projet développé dans le cadre de la Nuit de l'Info 2025 par l'**USDJPA**. Ce projet comprend plusieurs composants : déploiement automatisé, API Winux, documentation IA éco-responsable, et système de gestion de sessions temporaires.
 
 ---
 
