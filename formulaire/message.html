@@ -25,11 +25,14 @@
       border: 1px solid #000;
     }
   </style>
+  <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+
 </head>
 <body>
   <h1>📜 Acte de nomination</h1>
   <div class="message" id="messageRSE"></div>
   <div id="blasonContainer"></div>
+<button onclick="genererPDF()">Télécharger le diplôme</button>
 
   <script>
     const params = new URLSearchParams(window.location.search);
@@ -47,5 +50,96 @@ Par les droits conférés par le Royaume des Informaticiens, moi, Andreas Ier de
       document.getElementById("blasonContainer").innerHTML = decoded;
     }
   </script>
+  <script>
+async function genererPDF() {
+  const { PDFDocument, rgb, StandardFonts } = PDFLib;
+
+  const params = new URLSearchParams(window.location.search);
+  const prenom = params.get("prenom") || "Prénom";
+  const nom = params.get("nom") || "Nom";
+  const residence = params.get("residence") || "Ville";
+  const pays = params.get("pays") || "Pays";
+  const naissanceVille = params.get("naissanceVille") || "Ville de naissance";
+  const naissanceDate = params.get("naissanceDate") || "Date";
+  const parent1 = params.get("parent1") || "Parent1";
+  const parent2 = params.get("parent2") || "Parent2";
+  const blasonSvg = decodeURIComponent(params.get("blasonSvg") || "");
+
+  const pdfDoc = await PDFDocument.create();
+  const timesRomanFont = await pdfDoc.embedFont(StandardFonts.TimesRoman);
+
+  // --- PAGE 1 : portrait ---
+  const page1 = pdfDoc.addPage();
+  page1.setFont(timesRomanFont);
+  page1.setFontSize(12);
+  const { width, height } = page1.getSize();
+
+  const message = `Cher comte ${prenom} Ier de ${nom}, comte de ${residence}, vassal du roi du ${pays},
+né des Terres de ${naissanceVille} le ${naissanceDate}, fruit de l’union de l’aimé·e ${parent1} et du respecté·e ${parent2}.
+
+Par les droits conférés par le Royaume des Informaticiens, moi, Andreas Ier de Mulard,
+né sur le comté de Chambray-lès-Tours, te confirme le titre de Chevalier de la RSE,
+et la gloire qu’il incarne.`;
+
+  page1.drawText(message, {
+    x: 50,
+    y: height - 80,
+    size: 12,
+    lineHeight: 16
+  });
+
+  // --- PAGE 2 : paysage ---
+  const landscapeWidth = height;
+  const landscapeHeight = width;
+  const page2 = pdfDoc.addPage([landscapeWidth, landscapeHeight]);
+  page2.setFont(timesRomanFont);
+  page2.setFontSize(14);
+
+  page2.drawText("Société Chevaleresque des Programmeurs 37", {
+    x: landscapeWidth / 2 - 180,
+    y: landscapeHeight - 50
+  });
+
+  page2.drawText(`Est délivré à ${prenom} de ${nom}, comte de ${residence}`, {
+    x: 100,
+    y: landscapeHeight - 120
+  });
+
+  page2.drawText("le rang de Chevalier de la RSE et les droits qui y sont liés", {
+    x: 100,
+    y: landscapeHeight - 150
+  });
+
+  page2.drawText(`${prenom} de ${nom}, comte de ${residence}`, {
+    x: 50,
+    y: 100
+  });
+
+  page2.drawText("Andreas Ier de Mulard", {
+    x: landscapeWidth - 250,
+    y: 100
+  });
+
+  // Optionnel : intégrer le blason (si présent)
+  if (blasonSvg && blasonSvg.includes("<svg")) {
+    const svgImageBytes = await pdfDoc.embedSvg(blasonSvg, { height: 100, width: 80 });
+    page2.drawImage(svgImageBytes, {
+      x: 50,
+      y: 130,
+      width: 80,
+      height: 100
+    });
+  }
+
+  // Finaliser
+  const pdfBytes = await pdfDoc.save();
+  const blob = new Blob([pdfBytes], { type: "application/pdf" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "diplome_chevalier.pdf";
+  link.click();
+}
+</script>
+
 </body>
 </html>
