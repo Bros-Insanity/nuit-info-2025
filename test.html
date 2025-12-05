@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nuit de l'Info 2025</title>
+    <title>Dépendance Numérique : Enjeux de Souveraineté</title>
     <style>
         * {
             margin: 0;
@@ -12,54 +12,277 @@
         }
         
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: #e94560;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.7;
+            color: #2c3e50;
+            background: #f8f9fa;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 3rem 0;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            font-weight: 700;
+        }
+        
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.95;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 0 2rem;
         }
         
         .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+        }
+        
+        .intro {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-bottom: 2rem;
+            border-left: 4px solid #667eea;
+        }
+        
+        .section {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-bottom: 2rem;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .section:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+        }
+        
+        .section h2 {
+            color: #667eea;
+            font-size: 1.8rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #e9ecef;
+        }
+        
+        .section p {
+            margin-bottom: 1.2rem;
+            text-align: justify;
+            font-size: 1.05rem;
+        }
+        
+        .section p:last-child {
+            margin-bottom: 0;
+        }
+        
+        .highlight {
+            background: linear-gradient(120deg, #f093fb 0%, #f5576c 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 600;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+        
+        .stat-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .stat-box .number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-box .label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        
+        .sources {
+            background: #f8f9fa;
+            padding: 2rem;
+            border-radius: 12px;
+            margin-top: 3rem;
+            border-left: 4px solid #28a745;
+        }
+        
+        .sources h3 {
+            color: #28a745;
+            margin-bottom: 1.5rem;
+            font-size: 1.5rem;
+        }
+        
+        .sources ol {
+            list-style-position: inside;
+            line-height: 2;
+        }
+        
+        .sources li {
+            margin-bottom: 0.8rem;
+        }
+        
+        .sources a {
+            color: #667eea;
+            text-decoration: none;
+            word-break: break-all;
+            transition: color 0.2s;
+        }
+        
+        .sources a:hover {
+            color: #764ba2;
+            text-decoration: underline;
+        }
+        
+        .footer {
             text-align: center;
             padding: 2rem;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 20px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(233, 69, 96, 0.3);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            color: #6c757d;
+            margin-top: 3rem;
         }
         
-        h1 {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-            text-shadow: 0 0 20px rgba(233, 69, 96, 0.5);
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .header p {
+                font-size: 1rem;
+            }
+            
+            .container {
+                padding: 2rem 1rem;
+            }
+            
+            .section {
+                padding: 1.5rem;
+            }
+            
+            .stats {
+                grid-template-columns: 1fr;
+            }
         }
         
-        p {
-            font-size: 1.2rem;
-            color: #fff;
-            opacity: 0.8;
-        }
-        
-        .status {
-            margin-top: 2rem;
-            padding: 1rem 2rem;
-            background: linear-gradient(90deg, #e94560, #ff6b6b);
-            border-radius: 50px;
-            color: white;
-            font-weight: bold;
+        .badge {
             display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-left: 0.5rem;
         }
     </style>
 </head>
 <body>
+    <div class="header">
+        <h1>Dépendance Numérique</h1>
+        <p>Enjeux de souveraineté et alternatives européennes</p>
+    </div>
+    
     <div class="container">
-        <h1>Nuit de l'Info 2025</h1>
-        <p>Bros Insanity - Container deploye via Semaphore CI/CD</p>
-        <div class="status">Serveur Web Operationnel</div>
+        <div class="intro">
+            <h2>Introduction</h2>
+            <p>
+                Depuis une vingtaine d'années, les administrations, les entreprises et les particuliers à travers le monde reposent massivement sur des solutions numériques développées par des géants américains : <span class="highlight">Microsoft</span> pour les systèmes d'exploitation et les suites bureautiques <span class="badge">(1)(2)</span>, <span class="highlight">Google</span> pour les services en ligne, et désormais <span class="highlight">OpenAI</span> ou <span class="highlight">Anthropic</span> pour l'intelligence artificielle. Cette dépendance soulève des questions majeures en matière de souveraineté numérique, de protection des données et de maîtrise technologique. En Europe, et particulièrement en France, les pouvoirs publics tentent de promouvoir des alternatives locales, mais le chemin vers l'autonomie reste semé d'embûches, tant les infrastructures, les habitudes et les coûts sont ancrés dans l'écosystème américain <span class="badge">(3)</span>.
+            </p>
+        </div>
+        
+        <div class="section">
+            <h2>Le Cloud Act</h2>
+            <p>
+                Adopté en 2018, le <strong>Cloud Act</strong> (Clarifying Lawful Overseas Use of Data Act) renforce la mainmise des États-Unis sur les données mondiales <span class="badge">(4)</span>. Cette loi permet au gouvernement américain d'obliger les entreprises américaines, comme Microsoft, Apple, Google ou encore Meta, à transmettre les données qu'elles hébergent, où qu'elles soient stockées dans le monde, dès lors qu'une demande judiciaire est formulée <span class="badge">(5)</span>.
+            </p>
+            <p>
+                Pour les administrations et entreprises européennes, cela signifie que leurs données, même hébergées sur des serveurs locaux, peuvent être accessibles aux autorités américaines, remettant en cause la confidentialité et la souveraineté numérique. Cette loi est d'autant plus problématique dans le cadre du mandat de Donald Trump, dont la politique pourrait pousser les entreprises américaines à fournir leurs données sous simple requête gouvernementale. Ce cadre juridique a poussé plusieurs pays, dont la France, à repenser leur stratégie cloud et à privilégier des solutions souveraines, comme les offres labellisées <strong>SecNumCloud</strong> (OVH, Scaleway…), pour limiter les risques d'ingérence étrangère <span class="badge">(6)</span>.
+            </p>
+        </div>
+        
+        <div class="section">
+            <h2>Systèmes d'exploitation</h2>
+            <p>
+                <span class="highlight">Windows</span> domine toujours le marché des systèmes d'exploitation, avec plus de <strong>70 % de parts de marché</strong> en France en 2025 <span class="badge">(7)</span>, malgré la disponibilité de solutions open source comme Linux. Les administrations et les entreprises peinent à migrer vers des alternatives, en raison de la compatibilité des logiciels, de la formation des utilisateurs et de l'intégration des outils métiers.
+            </p>
+            <p>
+                Pourtant, des distributions Linux adaptées aux besoins professionnels (Ubuntu, Fedora, ou encore la française Qubes OS) offrent une alternative robuste et sécurisée. Le coût des licences Windows et Office 365 est un autre frein majeur : un poste informatique équipé de Windows et de la suite Office peut coûter plusieurs centaines d'euros par an en licences, sans compter les mises à jour et les abonnements cloud <span class="badge">(8)</span>.
+            </p>
+            
+            <div class="stats">
+                <div class="stat-box">
+                    <div class="number">74M€</div>
+                    <div class="label">Ministère de l'Éducation<br>Licences Microsoft (2025)</div>
+                </div>
+                <div class="stat-box">
+                    <div class="number">850K€</div>
+                    <div class="label">Université de Tours<br>Coût annuel Windows/Office</div>
+                </div>
+                <div class="stat-box">
+                    <div class="number">70%</div>
+                    <div class="label">Parts de marché<br>Windows en France</div>
+                </div>
+            </div>
+            
+            <p>
+                À l'échelle d'une administration ou d'une grande entreprise, ces dépenses représentent des millions d'euros annuels. Par exemple, le ministère de l'Éducation nationale a débloqué un budget prévisionnel de <strong>74 millions d'euros</strong> en 2025 pour l'achat de licences et clés Microsoft <span class="badge">(9)</span>, tandis que l'Université de Tours estime que les postes Windows et comptes Office pour son personnel et ses étudiants lui coûtent environ <strong>850 000 € par an</strong>.
+            </p>
+        </div>
+        
+        <div class="section">
+            <h2>Intelligence Artificielle</h2>
+            <p>
+                L'intelligence artificielle est un autre domaine où la dépendance aux acteurs américains est criante. <span class="highlight">OpenAI</span> (ChatGPT), <span class="highlight">Anthropic</span> (Claude) ou encore <span class="highlight">Google</span> (Gemini) dominent le marché des modèles d'IA générative, utilisés par des millions d'utilisateurs et d'entreprises à travers le monde.
+            </p>
+            <p>
+                Pourtant, ces outils posent des questions éthiques, juridiques et stratégiques : où sont stockées les données ? Qui contrôle les algorithmes ? En Europe, des initiatives émergent pour développer des alternatives souveraines, comme <strong>Mistral AI</strong> en France ou <strong>Aleph Alpha</strong> en Allemagne, mais elles restent marginales face à l'hégémonie des géants américains <span class="badge">(10)</span>.
+            </p>
+            <p>
+                Les coûts d'accès à ces technologies, souvent facturés à l'usage, s'ajoutent à la facture numérique des organisations, renforçant encore la dépendance économique. Pour les États et les entreprises, le défi est double : réduire cette dépendance tout en continuant à bénéficier des avancées technologiques, sans sacrifier ni la sécurité ni l'innovation.
+            </p>
+        </div>
+        
+        <div class="sources">
+            <h3>Sources</h3>
+            <ol>
+                <li><a href="https://www.blogdumoderateur.com/chiffres-microsoft/" target="_blank">https://www.blogdumoderateur.com/chiffres-microsoft/</a></li>
+                <li><a href="https://www.leptidigital.fr/technologie/parts-marche-systemes-exploitation-26774/" target="_blank">https://www.leptidigital.fr/technologie/parts-marche-systemes-exploitation-26774/</a></li>
+                <li><a href="https://www.warketingdigital.net/les-50-ia-generatives-les-plus-utilisees/" target="_blank">https://www.warketingdigital.net/les-50-ia-generatives-les-plus-utilisees/</a> et <a href="https://les-enovateurs.com/inquietante-dependance-services-publics-europeens-logiciels-microsoft" target="_blank">https://les-enovateurs.com/inquietante-dependance-services-publics-europeens-logiciels-microsoft</a></li>
+                <li><a href="https://www.senat.fr/basile/visio.do?id=r8106947_4&idtable=r8106947_4|r8106971|r8117211_16|r8112361_17|r8111008_13|r8112132_1|r8114415_7|r8105203_12&_c=cloud+act&rch=gs&de=20151205&au=20251205&dp=10+ans&radio=dp&aff=sep&tri=p&off=0&afd=ppr&afd=ppl&afd=pjl&afd=cvn&rx=true&isFirst=true" target="_blank">Sénat - Cloud Act</a></li>
+                <li><a href="https://fr.wikipedia.org/wiki/CLOUD_Act" target="_blank">https://fr.wikipedia.org/wiki/CLOUD_Act</a></li>
+                <li><a href="https://cyber.gouv.fr/prestataires-de-services-dinformatique-en-nuage-secnumcloud" target="_blank">https://cyber.gouv.fr/prestataires-de-services-dinformatique-en-nuage-secnumcloud</a></li>
+                <li><a href="https://www.blogdumoderateur.com/chiffres-microsoft/" target="_blank">https://www.blogdumoderateur.com/chiffres-microsoft/</a></li>
+                <li><a href="https://www.clubic.com/pro/entreprises/microsoft/article-432870-les-meilleurs-sites-pour-acheter-une-licence-microsoft-office-a-bas-prix.html" target="_blank">https://www.clubic.com/pro/entreprises/microsoft/article-432870-les-meilleurs-sites-pour-acheter-une-licence-microsoft-office-a-bas-prix.html</a></li>
+                <li><a href="https://www.channelnews.fr/lattribution-dun-marche-public-de-74-me-a-microsoft-par-le-ministere-de-leducation-nationale-cree-des-remous-143936" target="_blank">https://www.channelnews.fr/lattribution-dun-marche-public-de-74-me-a-microsoft-par-le-ministere-de-leducation-nationale-cree-des-remous-143936</a></li>
+                <li><a href="https://www.empreintesdigitales.fr/intelligence-artificielle-mistral-se-lance-dans-la-bataille-contre-les-titans-americains/" target="_blank">https://www.empreintesdigitales.fr/intelligence-artificielle-mistral-se-lance-dans-la-bataille-contre-les-titans-americains/</a></li>
+            </ol>
+        </div>
+        
+        <div class="footer">
+            <p>Déployé via Semaphore CI/CD sur Proxmox | Nuit de l'Info 2025</p>
+        </div>
     </div>
 </body>
 </html>
-
