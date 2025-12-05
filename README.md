@@ -391,7 +391,7 @@ Utilisez les secrets Semaphore ou des fichiers `.env` (non versionnés).
 
 ---
 
-## 🔄Mise à Jour
+## Mise à Jour
 
 ### Mise à jour du Site Web
 
