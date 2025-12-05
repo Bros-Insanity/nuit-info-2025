@@ -127,11 +127,25 @@
 
     - name: Create SSH key file from environment
       copy:
-        content: "{{ proxmox_ssh_private_key }}"
+        content: |
+          {{ proxmox_ssh_private_key }}
         dest: "/tmp/proxmox_ssh_key"
         mode: '0600'
       when: proxmox_ssh_private_key is defined
       ignore_errors: yes
+      no_log: true
+
+    - name: Validate SSH key format
+      command: ssh-keygen -l -f /tmp/proxmox_ssh_key
+      register: key_validation
+      ignore_errors: yes
+      changed_when: false
+      when: proxmox_ssh_private_key is defined
+
+    - name: Show key validation result
+      debug:
+        msg: "Key validation: {{ key_validation.stdout if key_validation.rc == 0 else 'INVALID - ' + key_validation.stderr }}"
+      when: proxmox_ssh_private_key is defined
 
     - name: Test SSH connection to Proxmox
       shell: |
