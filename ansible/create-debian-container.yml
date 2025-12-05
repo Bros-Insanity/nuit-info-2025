@@ -125,12 +125,27 @@
       pause:
         seconds: 30
 
+    - name: Check if sshpass is installed
+      command: which sshpass
+      register: sshpass_check
+      ignore_errors: yes
+      changed_when: false
+
+    - name: Install sshpass if missing
+      apt:
+        name: sshpass
+        state: present
+        update_cache: yes
+      when: sshpass_check.rc != 0
+      ignore_errors: yes
+
     - name: Install nginx and curl via pct exec
       shell: |
         sshpass -p '{{ proxmox_ssh_password }}' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@{{ proxmox_api_host }} "pct exec {{ container_id }} -- bash -c 'export DEBIAN_FRONTEND=noninteractive && apt-get update && apt-get install -y nginx curl'"
       register: install_nginx
       ignore_errors: yes
       changed_when: install_nginx.rc == 0
+      when: proxmox_ssh_password is defined
 
     - name: Download test.html via pct exec
       shell: |
@@ -138,7 +153,7 @@
       register: download_file
       ignore_errors: yes
       changed_when: download_file.rc == 0
-      when: install_nginx.rc == 0
+      when: install_nginx.rc == 0 and proxmox_ssh_password is defined
 
     - name: Enable and start nginx via pct exec
       shell: |
@@ -146,7 +161,7 @@
       register: start_nginx
       ignore_errors: yes
       changed_when: start_nginx.rc == 0
-      when: install_nginx.rc == 0
+      when: install_nginx.rc == 0 and proxmox_ssh_password is defined
 
     - name: Show result
       debug:
