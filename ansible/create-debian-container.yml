@@ -126,23 +126,20 @@
         seconds: 30
 
     - name: Install nginx and curl via pct exec
-      shell: |
-        ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@{{ proxmox_api_host }} "pct exec {{ container_id }} -- bash -c 'export DEBIAN_FRONTEND=noninteractive && apt-get update && apt-get install -y nginx curl'"
+      command: ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@{{ proxmox_api_host }} "pct exec {{ container_id }} -- bash -c 'export DEBIAN_FRONTEND=noninteractive && apt-get update && apt-get install -y nginx curl'"
       register: install_nginx
       ignore_errors: yes
       changed_when: install_nginx.rc == 0
 
     - name: Download test.html via pct exec
-      shell: |
-        ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@{{ proxmox_api_host }} "pct exec {{ container_id }} -- curl -s -o /var/www/html/index.html {{ github_repo }}"
+      command: ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@{{ proxmox_api_host }} "pct exec {{ container_id }} -- curl -s -o /var/www/html/index.html {{ github_repo }}"
       register: download_file
       ignore_errors: yes
       changed_when: download_file.rc == 0
       when: install_nginx.rc == 0
 
     - name: Enable and start nginx via pct exec
-      shell: |
-        ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@{{ proxmox_api_host }} "pct exec {{ container_id }} -- systemctl enable --now nginx"
+      command: ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@{{ proxmox_api_host }} "pct exec {{ container_id }} -- systemctl enable --now nginx"
       register: start_nginx
       ignore_errors: yes
       changed_when: start_nginx.rc == 0
