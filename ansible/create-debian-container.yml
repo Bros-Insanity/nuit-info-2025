@@ -14,7 +14,8 @@
     container_gateway: "10.0.0.254"
     container_dns: "1.1.1.1"
     github_repo: "Bros-Insanity/nuit-info-2025"
-    github_branch: "main"
+    # La branche peut être spécifiée via -e github_branch=winux-auto-deploy
+    github_branch: "{{ github_branch | default('main') }}"
 
   tasks:
     - name: Check if container exists
@@ -168,7 +169,7 @@
       changed_when: install_nginx.rc == 0
       when: proxmox_ssh_private_key is defined
 
-    - name: Set default branch
+    - name: Set deploy branch
       set_fact:
         deploy_branch: "{{ github_branch | default('main') }}"
 

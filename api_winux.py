@@ -399,6 +399,31 @@ def health_check():
         }), 500
 
 
+@app.errorhandler(404)
+def not_found(error):
+    """Gestionnaire d'erreur 404"""
+    return jsonify({
+        'success': False,
+        'error': 'Endpoint non trouvé'
+    }), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    """Gestionnaire d'erreur 500"""
+    return jsonify({
+        'success': False,
+        'error': 'Erreur interne du serveur'
+    }), 500
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    """Gestionnaire d'erreur global"""
+    app.logger.error(f"Exception non gérée: {str(e)}", exc_info=True)
+    return jsonify({
+        'success': False,
+        'error': str(e)
+    }), 500
+
 def cleanup_thread():
     """Thread pour nettoyer automatiquement les sessions expirées"""
     while True:

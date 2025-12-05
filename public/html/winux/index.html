@@ -447,7 +447,18 @@
                     })
                 });
                 
+                // Vérifier le Content-Type avant de parser
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await response.text();
+                    throw new Error(`Réponse invalide de l'API (${response.status}): ${text.substring(0, 100)}`);
+                }
+                
                 const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || `Erreur HTTP ${response.status}`);
+                }
                 
                 if (data.success) {
                     currentSession = data.session;
@@ -461,7 +472,12 @@
                     throw new Error(data.error || 'Erreur lors de la création de la session');
                 }
             } catch (error) {
-                showAlert('error', `❌ Erreur: ${error.message}`);
+                let errorMessage = error.message;
+                if (error instanceof SyntaxError) {
+                    errorMessage = 'Erreur de communication avec l\'API. Vérifiez que l\'API Flask est démarrée.';
+                }
+                showAlert('error', `❌ Erreur: ${errorMessage}`);
+                console.error('Erreur détaillée:', error);
             } finally {
                 loading.classList.remove('active');
                 btnCreate.disabled = false;
@@ -487,7 +503,17 @@
                     method: 'DELETE'
                 });
                 
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await response.text();
+                    throw new Error(`Réponse invalide de l'API (${response.status}): ${text.substring(0, 100)}`);
+                }
+                
                 const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || `Erreur HTTP ${response.status}`);
+                }
                 
                 if (data.success) {
                     showAlert('success', '✅ Session terminée avec succès');
@@ -496,7 +522,12 @@
                     throw new Error(data.error || 'Erreur lors de la suppression de la session');
                 }
             } catch (error) {
-                showAlert('error', `❌ Erreur: ${error.message}`);
+                let errorMessage = error.message;
+                if (error instanceof SyntaxError) {
+                    errorMessage = 'Erreur de communication avec l\'API. Vérifiez que l\'API Flask est démarrée.';
+                }
+                showAlert('error', `❌ Erreur: ${errorMessage}`);
+                console.error('Erreur détaillée:', error);
             } finally {
                 loading.classList.remove('active');
                 btnDestroy.disabled = false;
@@ -560,6 +591,13 @@
                 
                 try {
                     const response = await fetch(`${API_BASE}/sessions/${currentSession.session_id}`);
+                    
+                    const contentType = response.headers.get('content-type');
+                    if (!contentType || !contentType.includes('application/json')) {
+                        console.warn('API non disponible lors du rafraîchissement');
+                        return;
+                    }
+                    
                     const data = await response.json();
                     
                     if (data.success) {
@@ -571,7 +609,11 @@
                         resetUI();
                     }
                 } catch (error) {
-                    console.error('Erreur lors du rafraîchissement:', error);
+                    if (error instanceof SyntaxError) {
+                        console.warn('API non disponible lors du rafraîchissement');
+                    } else {
+                        console.error('Erreur lors du rafraîchissement:', error);
+                    }
                 }
             }, 30000);
         }
@@ -597,6 +639,13 @@
         window.addEventListener('load', async () => {
             try {
                 const response = await fetch(`${API_BASE}/sessions`);
+                
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    console.warn('API non disponible ou réponse invalide');
+                    return;
+                }
+                
                 const data = await response.json();
                 
                 if (data.success && data.sessions.length > 0) {
@@ -611,7 +660,11 @@
                     showAlert('info', '📱 Session active détectée');
                 }
             } catch (error) {
-                console.error('Erreur lors de la vérification des sessions:', error);
+                if (error instanceof SyntaxError) {
+                    console.warn('API non disponible - L\'API Flask n\'est probablement pas démarrée');
+                } else {
+                    console.error('Erreur lors de la vérification des sessions:', error);
+                }
             }
         });
     </script>
