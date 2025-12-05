@@ -202,7 +202,7 @@
 
     - name: Install pip dependencies
       shell: |
-        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@{{ proxmox_api_host }} "pct exec {{ container_id }} -- bash -c 'pip install -r nuit-info-2025/ai_deployment/requirements.txt --break-system-packages'"
+        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@{{ proxmox_api_host }} "pct exec {{ container_id }} -- bash -c 'pip install torch transformers accelerate --break-system-packages'"
       register: pip_install
       ignore_errors: yes
       changed_when: start_postfix.rc == 0
