@@ -175,7 +175,7 @@
 
     - name: Deploy public directory via git clone
       shell: |
-        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@{{ proxmox_api_host }} "pct exec {{ container_id }} -- bash -c 'set -e && cd /tmp && rm -rf nuit-info-2025 && git clone --depth 1 --branch {{ deploy_branch }} https://github.com/{{ github_repo }}.git && rm -rf /var/www/html/* /var/www/html/.* 2>/dev/null || true && mkdir -p /var/www/html/contact /var/www/html/diplome /var/www/html/winux && cp -r nuit-info-2025/public/css /var/www/html/ && cp -r nuit-info-2025/public/js /var/www/html/ && cp -r nuit-info-2025/public/html/contact/* /var/www/html/contact/ && cp -r nuit-info-2025/public/html/diplome/* /var/www/html/diplome/ && if [ -d \"nuit-info-2025/public/html/winux\" ]; then cp -r nuit-info-2025/public/html/winux/* /var/www/html/winux/; fi && cp nuit-info-2025/public/html/index.html /var/www/html/index.html && chown -R www-data:www-data /var/www/html && chmod 755 /var/www/html && chmod -R 644 /var/www/html/* && find /var/www/html -type d -exec chmod 755 {} \; && find /var/www/html -type f -exec chmod 644 {} \; && echo \"=== Deployment complete ===\" && echo \"=== Files in /var/www/html ===\" && ls -la /var/www/html && if [ -d \"/var/www/html/winux\" ]; then echo \"=== Files in /var/www/html/winux ===\" && ls -la /var/www/html/winux; fi && rm -rf nuit-info-2025'"
+        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@{{ proxmox_api_host }} "pct exec {{ container_id }} -- bash -c 'set -e && cd /tmp && rm -rf nuit-info-2025 && git clone --depth 1 --branch {{ deploy_branch }} https://github.com/{{ github_repo }}.git && rm -rf /var/www/html/* /var/www/html/.* 2>/dev/null || true && mkdir -p /var/www/html/contact /var/www/html/diplome /var/www/html/winux && cp -r nuit-info-2025/public/css /var/www/html/ && cp -r nuit-info-2025/public/js /var/www/html/ && cp -r nuit-info-2025/public/html/contact/* /var/www/html/contact/ && cp -r nuit-info-2025/public/html/diplome/* /var/www/html/diplome/ && if [ -d \"nuit-info-2025/public/html/winux\" ]; then cp -r nuit-info-2025/public/html/winux/* /var/www/html/winux/; fi && cp nuit-info-2025/public/html/index.html /var/www/html/index.html && mkdir -p /opt && cp -r nuit-info-2025 /opt/ && chown -R www-data:www-data /var/www/html && chmod 755 /var/www/html && chmod -R 644 /var/www/html/* && find /var/www/html -type d -exec chmod 755 {} \; && find /var/www/html -type f -exec chmod 644 {} \; && echo \"=== Deployment complete ===\" && echo \"=== Files in /var/www/html ===\" && ls -la /var/www/html && if [ -d \"/var/www/html/winux\" ]; then echo \"=== Files in /var/www/html/winux ===\" && ls -la /var/www/html/winux; fi && rm -rf /tmp/nuit-info-2025'"
       register: deploy_files
       ignore_errors: yes
       changed_when: deploy_files.rc == 0
@@ -201,6 +201,81 @@
       changed_when: start_nginx.rc == 0
       when: install_nginx.rc == 0 and proxmox_ssh_private_key is defined
 
+    - name: Installer Python3 et pip dans le container
+      shell: |
+        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} \
+            -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=10 \
+            root@{{ proxmox_api_host }} \
+            "pct exec {{ container_id }} -- bash -c 'export DEBIAN_FRONTEND=noninteractive && apt-get update && apt-get install -y python3 python3-pip python3-venv'"
+      register: install_python
+      ignore_errors: yes
+      changed_when: install_python.rc == 0
+      when: install_nginx.rc == 0 and proxmox_ssh_private_key is defined
+
+    - name: Installer les dépendances Python pour l'API Winux
+      shell: |
+        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} \
+            -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=10 \
+            root@{{ proxmox_api_host }} \
+            "pct exec {{ container_id }} -- bash -c 'cd /opt/nuit-info-2025 && pip3 install -r requirements_winux.txt'"
+      register: install_api_deps
+      ignore_errors: yes
+      changed_when: install_api_deps.rc == 0
+      when: install_python.rc == 0 and deploy_files.rc == 0 and proxmox_ssh_private_key is defined
+
+    - name: Créer le service systemd pour l'API Winux
+      shell: |
+        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} \
+            -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=10 \
+            root@{{ proxmox_api_host }} \
+            "pct exec {{ container_id }} -- bash -c 'cat > /etc/systemd/system/winux-api.service << EOF
+[Unit]
+Description=API Winux Flask
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/nuit-info-2025
+Environment=\"PATH=/usr/bin:/usr/local/bin\"
+ExecStart=/usr/bin/python3 /opt/nuit-info-2025/api_winux.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+EOF'"
+      register: create_api_service
+      ignore_errors: yes
+      changed_when: create_api_service.rc == 0
+      when: install_api_deps.rc == 0 and proxmox_ssh_private_key is defined
+
+    - name: Recharger systemd et démarrer l'API Winux
+      shell: |
+        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} \
+            -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=10 \
+            root@{{ proxmox_api_host }} \
+            "pct exec {{ container_id }} -- bash -c 'systemctl daemon-reload && systemctl enable --now winux-api'"
+      register: start_api_service
+      ignore_errors: yes
+      changed_when: start_api_service.rc == 0
+      when: create_api_service.rc == 0 and proxmox_ssh_private_key is defined
+
+    - name: Vérifier le statut de l'API Winux
+      shell: |
+        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} \
+            -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=10 \
+            root@{{ proxmox_api_host }} \
+            "pct exec {{ container_id }} -- systemctl status winux-api --no-pager -l"
+      register: api_status
+      ignore_errors: yes
+      when: start_api_service.rc == 0 and proxmox_ssh_private_key is defined
+
     - name: Show result
       debug:
         msg: |
@@ -213,4 +288,10 @@
           Nginx installe et site web deploye avec succes!
           {% else %}
           Note: Installation nginx necessite un acces SSH au serveur Proxmox ({{ proxmox_api_host }})
+          {% endif %}
+          {% if start_api_service.rc == 0 %}
+          API Winux installee et demarree avec succes!
+          API accessible sur: http://localhost:5000/api/winux
+          {% else %}
+          Note: Installation API Winux necessite un acces SSH au serveur Proxmox ({{ proxmox_api_host }})
           {% endif %}
