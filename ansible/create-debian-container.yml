@@ -25,9 +25,15 @@
         headers:
           Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
         validate_certs: no
-        status_code: [200, 500]
+        status_code: [200, 400, 404, 500]
       register: container_check
       ignore_errors: yes
+      failed_when: false
+
+    - name: Set fact if container exists
+      set_fact:
+        container_exists: "{{ container_check.status == 200 }}"
+      when: container_check is defined
 
     - name: Stop existing container
       uri:
@@ -36,14 +42,15 @@
         headers:
           Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
         validate_certs: no
-        status_code: [200, 202, 500]
-      when: container_check.status == 200
+        status_code: [200, 202, 400, 404, 500]
+      when: container_exists | default(false)
       ignore_errors: yes
+      failed_when: false
 
     - name: Wait for container to stop
       pause:
         seconds: 5
-      when: container_check.status == 200
+      when: container_exists | default(false)
 
     - name: Delete existing container
       uri:
@@ -52,14 +59,15 @@
         headers:
           Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
         validate_certs: no
-        status_code: [200, 202, 500]
-      when: container_check.status == 200
+        status_code: [200, 202, 400, 404, 500]
+      when: container_exists | default(false)
       ignore_errors: yes
+      failed_when: false
 
     - name: Wait for container deletion
       pause:
-        seconds: 5
-      when: container_check.status == 200
+        seconds: 10
+      when: container_exists | default(false)
 
     - name: Get current templates on storage
       uri:
