@@ -82,7 +82,7 @@
 
   <div>
     <label>Genre parent 2 :</label>
-    <label><input type="radio" name="genreP2" value="Homme"> Homme</label>
+    <label><input type="radio" name="genreP2" value="Homme" > Homme</label>
     <label><input type="radio" name="genreP2" value="Femme"> Femme</label>
     <label><input type="radio" name="genreP2" value="Non-binaire"> Non-binaire</label>
   </div>
@@ -1403,6 +1403,7 @@ function updateCountries(){
       const opt = document.createElement("option");
       opt.textContent = c.flag;
       opt.title = c.name;
+	  opt.value = c.name;
       paysSelect.appendChild(opt);
     });
   }
@@ -1564,6 +1565,10 @@ function redirectToMessage(event) {
     const svgString = serializer.serializeToString(svg);
     svgEncoded = encodeURIComponent(svgString);
   }
+    const genre = document.querySelector("input[name='genrePers']:checked")?.value || "";
+  const genre1 = document.querySelector("input[name='genreP1']:checked")?.value || "";
+  const genre2 = document.querySelector("input[name='genreP2']:checked")?.value || "";
+
 
   // récupérer les champs
 const data = {
@@ -1577,8 +1582,12 @@ const data = {
                   document.getElementById("repYear").value,
   parent1: document.getElementById("parent1").value,
   parent2: document.getElementById("parent2").value,
+    genre: genre,
+    genre1: genre1,
+    genre2: genre2,
   blasonSvg: svgEncoded
 };
+
 
   // convertir en query string et rediriger
   const query = new URLSearchParams(data).toString();
