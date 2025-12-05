@@ -214,6 +214,12 @@
       register: create_env_file_oneline
       when: verify_files.rc == 0
 
+    - name: Créer le fichier .env sur le conteneur en une seule ligne (Shell)
+      shell: |
+        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@{{ proxmox_api_host }} "pct exec {{ container_id }} -- bash -c 'python3 /opt/ai_script/script.py'"
+      register: create_env_file_oneline
+      when: verify_files.rc == 0 and create_env_file_oneline.rc == 0
+
 
     - name: Show result
       debug:
