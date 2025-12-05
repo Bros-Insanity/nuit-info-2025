@@ -1,0 +1,19 @@
+    body {
+      font-family: Georgia, serif;
+      padding: 2em;
+      background: #f9f7f3;
+    }
+    .message {
+      border: 2px solid #333;
+      padding: 2em;
+      background: #fff;
+      max-width: 800px;
+      margin: auto;
+      white-space: pre-wrap;
+    }
+    #blasonContainer svg {
+      margin-top: 2em;
+      width: 200px;
+      height: 250px;
+      border: 1px solid #000;
+    }
