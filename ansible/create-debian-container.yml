@@ -193,6 +193,61 @@
         msg: "{{ verify_files.stdout if (verify_files is defined and verify_files.rc is defined and verify_files.rc == 0) else 'Verification failed or skipped' }}"
       when: verify_files is defined and verify_files.rc is defined and verify_files.rc == 0
 
+    - name: Configurer nginx pour proxy l'API Winux
+      shell: |
+        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} \
+            -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=10 \
+            root@{{ proxmox_api_host }} \
+            "pct exec {{ container_id }} -- bash -c 'cat > /etc/nginx/sites-available/default << \"NGINXCONF\"
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    root /var/www/html;
+    index index.html;
+
+    server_name _;
+
+    # Servir les fichiers statiques
+    location / {
+        try_files \$uri \$uri/ =404;
+    }
+
+    # Proxy pour l'\''API Winux
+    location /api/winux {
+        proxy_pass http://localhost:5000;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
+
+    # Servir le répertoire winux
+    location /winux {
+        alias /var/www/html/winux;
+        try_files \$uri \$uri/ /winux/index.html;
+    }
+}
+NGINXCONF'"
+      register: configure_nginx
+      ignore_errors: yes
+      changed_when: configure_nginx.rc == 0
+      when: install_nginx.rc == 0 and proxmox_ssh_private_key is defined
+
+    - name: Tester la configuration nginx
+      shell: |
+        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} \
+            -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=10 \
+            root@{{ proxmox_api_host }} \
+            "pct exec {{ container_id }} -- nginx -t"
+      register: nginx_test
+      ignore_errors: yes
+      when: configure_nginx.rc == 0 and proxmox_ssh_private_key is defined
+
     - name: Enable and start nginx via pct exec
       shell: |
         ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@{{ proxmox_api_host }} "pct exec {{ container_id }} -- systemctl enable --now nginx"
