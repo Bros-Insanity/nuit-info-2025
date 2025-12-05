@@ -2,6 +2,8 @@
 
 Système de sessions temporaires Winux avec interface web et API backend Node.js/Express compatible nginx.
 
+> 📖 **Pour le déploiement avec Semaphore CI/CD, consultez [DEPLOYMENT_WINUX.md](DEPLOYMENT_WINUX.md)**
+
 ## 📋 Description
 
 Cette branche contient :
