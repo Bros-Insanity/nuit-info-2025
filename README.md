@@ -317,7 +317,7 @@ Voir [README_WINUX.md](README_WINUX.md) pour plus de détails.
 
 ---
 
-## 📊 Utilisation
+## Utilisation
 
 ### Site Web
 
