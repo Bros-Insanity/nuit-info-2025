@@ -128,50 +128,41 @@
       pause:
         seconds: 5
 
-    # --- Creation du script d'initialisation dans le container via pct exec (si SSH disponible) ---
-    - name: Create init script in container using inline commands
-      shell: |
-        ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@{{ proxmox_api_host }} "pct exec {{ container_id }} -- bash -c 'cat > /usr/local/bin/init-web.sh << \"INITEOF\"
-#!/bin/bash
-export DEBIAN_FRONTEND=noninteractive
-apt-get update -qq
-apt-get install -y nginx curl > /dev/null 2>&1
-curl -s -o /var/www/html/index.html {{ github_repo }}
-systemctl enable nginx > /dev/null 2>&1
-systemctl start nginx
-systemctl disable init-web.service > /dev/null 2>&1
-rm -f /etc/systemd/system/init-web.service
-systemctl daemon-reload
-INITEOF
-chmod +x /usr/local/bin/init-web.sh'"
-      register: create_init_script
+    # --- Configuration cloud-init pour installation automatique ---
+    - name: Create cloud-init user-data
+      set_fact:
+        cloud_init_user_data: |
+          #cloud-config
+          password: root
+          chpasswd:
+            expire: false
+          ssh_pwauth: true
+          runcmd:
+            - export DEBIAN_FRONTEND=noninteractive
+            - apt-get update
+            - apt-get install -y nginx curl
+            - curl -o /var/www/html/index.html {{ github_repo }}
+            - systemctl enable --now nginx
+
+    - name: Encode cloud-init user-data in base64
+      set_fact:
+        cloud_init_encoded: "{{ cloud_init_user_data | b64encode }}"
+
+    - name: Configure cloud-init via API
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/lxc/{{ container_id }}/config"
+        method: PUT
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
+        body_format: form-urlencoded
+        body:
+          cicustom: "user=base64:{{ cloud_init_encoded }}"
+        validate_certs: no
+        status_code: [200, 202]
+      register: cloud_init_config
       ignore_errors: yes
-      changed_when: create_init_script.rc == 0
 
-    - name: Create systemd service in container
-      shell: |
-        ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@{{ proxmox_api_host }} "pct exec {{ container_id }} -- bash -c 'cat > /etc/systemd/system/init-web.service << \"SERVICEEOF\"
-[Unit]
-Description=Initialize Web Container
-After=network-online.target
-Wants=network-online.target
-
-[Service]
-Type=oneshot
-ExecStart=/usr/local/bin/init-web.sh
-RemainAfterExit=yes
-
-[Install]
-WantedBy=multi-user.target
-SERVICEEOF
-systemctl daemon-reload
-systemctl enable init-web.service'"
-      register: create_service
-      ignore_errors: yes
-      changed_when: create_service.rc == 0
-      when: create_init_script.rc == 0
-
-    # --- Demarrage du container (le script s'executera automatiquement) ---
+    # --- Demarrage du container (cloud-init s'executera automatiquement) ---
     - name: Start container
       uri:
         url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/lxc/{{ container_id }}/status/start"
@@ -182,7 +173,7 @@ systemctl enable init-web.service'"
         status_code: [200, 202]
       register: start_result
 
-    - name: Wait for initialization script to complete
+    - name: Wait for cloud-init to complete
       pause:
         seconds: 90
 
@@ -194,12 +185,12 @@ systemctl enable init-web.service'"
           Gateway: {{ container_gateway }}
           DNS: {{ container_dns }}
           Web: http://10.0.0.20/
-          {% if create_init_script.rc != 0 %}
-          Note: Le script d'initialisation n'a pas pu etre cree (SSH vers Proxmox requis).
+          {% if cloud_init_config.status == 200 %}
+          Cloud-init configure! Nginx et test.html seront installes automatiquement au demarrage.
+          {% else %}
+          Note: Cloud-init n'a pas pu etre configure. Le template Debian standard ne supporte peut-etre pas cloud-init.
           Depuis Proxmox, executez manuellement:
           pct exec {{ container_id }} -- bash -c 'apt-get update && apt-get install -y nginx curl && curl -o /var/www/html/index.html {{ github_repo }} && systemctl enable --now nginx'
-          {% else %}
-          Script d'initialisation cree! Nginx et test.html seront installes automatiquement au demarrage.
           {% endif %}
 
     - name: Show result
