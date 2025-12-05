@@ -208,16 +208,16 @@
       changed_when: start_postfix.rc == 0
       when: verify_files.rc == 0 and proxmox_ssh_private_key is defined
 
-    - name: Créer le fichier .env sur le conteneur en une seule ligne (Shell)
+    - name: Créer le fichier .env
       shell: |
         ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@{{ proxmox_api_host }} "pct exec {{ container_id }} -- bash -c 'ENV_FILE=\"/opt/ai_script/.env\"; echo \"IMAP_SERVER=\\\"{{ imap_server }}\\\"\" > \"\$ENV_FILE\" && echo \"IMAP_USER=\\\"{{ imap_user }}\\\"\" >> \"\$ENV_FILE\" && echo \"IMAP_PASS=\\\"{{ imap_pass }}\\\"\" >> \"\$ENV_FILE\" && echo \"IMAP_MAILBOX=\\\"{{ imap_mailbox | default('INBOX') }}\\\"\" >> \"\$ENV_FILE\" && echo \"SMTP_SERVER=\\\"{{ smtp_server }}\\\"\" >> \"\$ENV_FILE\" && echo \"SMTP_USER=\\\"{{ smtp_user }}\\\"\" >> \"\$ENV_FILE\" && echo \"SMTP_PASS=\\\"{{ smtp_pass }}\\\"\" >> \"\$ENV_FILE\" && echo \"SMTP_PORT=\\\"{{ smtp_port | default(587) }}\\\"\" >> \"\$ENV_FILE\" && echo \"FROM_EMAIL=\\\"{{ from_email }}\\\"\" >> \"\$ENV_FILE\"'"
       register: create_env_file_oneline
       when: verify_files.rc == 0
 
-    - name: Créer le fichier .env sur le conteneur en une seule ligne (Shell)
+    - name: Démarrer le script
       shell: |
         ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@{{ proxmox_api_host }} "pct exec {{ container_id }} -- bash -c 'python3 /opt/ai_script/script.py'"
-      register: create_env_file_oneline
+      register: start_script
       when: verify_files.rc == 0 and create_env_file_oneline.rc == 0
 
 
