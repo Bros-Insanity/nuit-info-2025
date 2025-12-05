@@ -1,4 +1,3 @@
-
 const wordPool = {
   A:["Ananas","Astéroïde"], B:["Banane","Bateau"], C:["Cactus","Crabe"],
   D:["Dauphin","Dragon"], E:["Escargot","Éléphant"], F:["Fraise","Fusée"],
@@ -16,58 +15,41 @@ const wordPool = {
 };
 
 const picker = document.getElementById("wordPicker");
-const wordGrid = document.getElementById("wordGrid");
-const stickyGrid = document.getElementById("grid");
+const grid = document.getElementById("wordGrid");
 const closeBtn = document.getElementById("closePicker");
 let currentField = null;
 
 function capitalizeSmart(text){
   return text
     .toLowerCase()
-    .replace(/(^|[\s-])([\S])/g, (m,p1,p2) => p1 + p2.toUpperCase());
-}
-
-function renderStickyGrid() {
-  stickyGrid.innerHTML = "";
-  for (let key in wordPool) {
-    const words = wordPool[key];
-    const word = words[Math.floor(Math.random() * words.length)];
-    const btn = document.createElement("button");
-	btn.type = "button";
-    btn.textContent = word;
-    btn.onclick = () => {
-      if (!currentField) return;
-      const char = key;
-      currentField.value += (currentField.id === "email") ? char.toLowerCase() : key;
-      currentField.value = capitalizeSmart(currentField.value);
-      btn.textContent = words[Math.floor(Math.random() * words.length)];
-    };
-    stickyGrid.appendChild(btn);
-  }
-}
-function renderPopupGrid() {
-  wordGrid.innerHTML = "";
-  for (let key in wordPool) {
-    const words = wordPool[key];
-    const word = words[Math.floor(Math.random() * words.length)];
-    const btn = document.createElement("button");
-    btn.type = "button"; // 👈 Empêche le submit
-    btn.textContent = word;
-    btn.onclick = () => {
-      if (!currentField) return;
-      const char = key;
-      currentField.value += (currentField.id === "email") ? char.toLowerCase() : key;
-      currentField.value = capitalizeSmart(currentField.value);
-      btn.textContent = words[Math.floor(Math.random() * words.length)];
-    };
-    wordGrid.appendChild(btn);
-  }
+    .replace(/(^|\s|-)(\S)/g, (m,p1,p2) => p1 + p2.toUpperCase());
 }
 
 function openPicker(fieldId){
   currentField = document.getElementById(fieldId);
-  renderPopupGrid();
+  renderGrid();
   picker.style.display = "block";
+}
+
+function renderGrid(){
+  grid.innerHTML = "";
+  for (let key in wordPool){
+    const words = wordPool[key];
+    const word = words[Math.floor(Math.random() * words.length)];
+    const btn = document.createElement("button");
+    btn.textContent = word;
+	btn.onclick = () => {
+	  if (!currentField) return;
+	  const char = key; // Le caractère-clé
+	  if (currentField.id === "email") {
+		currentField.value += char.toLowerCase();
+	  } else {
+		currentField.value += char.length === 1 ? char : key;
+		currentField.value = capitalizeSmart(currentField.value);
+	  }
+	};
+    grid.appendChild(btn);
+  }
 }
 
 closeBtn.onclick = () => {
@@ -86,6 +68,42 @@ document.querySelectorAll("[data-clear]").forEach(btn=>{
   };
 });
 
-window.addEventListener("DOMContentLoaded", () => {
-  //renderStickyGrid();
-});
+const paysSelect = document.getElementById("pays");
+
+function updateCountries(){
+  const isRoman = document.querySelector("input[name='empire']:checked").value === "oui";
+  paysSelect.innerHTML = "";
+  if (isRoman){
+    provinces.forEach(p=>{
+      const opt = document.createElement("option");
+      opt.textContent = p;
+      paysSelect.appendChild(opt);
+    });
+  } else {
+    countries.forEach(c=>{
+      const opt = document.createElement("option");
+      opt.textContent = c.flag;
+      opt.title = c.name;
+	  opt.value = c.name;
+      paysSelect.appendChild(opt);
+    });
+  }
+}
+document.querySelectorAll("input[name='empire']").forEach(r=>r.onchange=updateCountries);
+updateCountries();
+
+// Date
+const repMonth = document.getElementById("repMonth");
+const repDay = document.getElementById("repDay");
+function updateDays(){
+  const m = repMonth.value;
+  const max = m === "Sans-culottides" ? 5 : 30;
+  repDay.innerHTML = "";
+  for (let i=1;i<=max;i++){
+    const opt = document.createElement("option");
+    opt.textContent = i;
+    repDay.appendChild(opt);
+  }
+}
+repMonth.onchange = updateDays;
+updateDays();
