@@ -174,11 +174,23 @@
 
     - name: Deploy public directory via git clone
       shell: |
-        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@{{ proxmox_api_host }} "pct exec {{ container_id }} -- bash -c 'cd /tmp && rm -rf nuit-info-2025 && git clone --depth 1 --branch {{ deploy_branch }} https://github.com/{{ github_repo }}.git && rm -rf /var/www/html/* && cp -r nuit-info-2025/public/css /var/www/html/ 2>/dev/null || true && cp -r nuit-info-2025/public/js /var/www/html/ 2>/dev/null || true && cp -r nuit-info-2025/public/html/contact /var/www/html/ 2>/dev/null || true && cp -r nuit-info-2025/public/html/diplome /var/www/html/ 2>/dev/null || true && cp nuit-info-2025/public/html/index.html /var/www/html/index.html && chown -R www-data:www-data /var/www/html && chmod -R 755 /var/www/html && ls -la /var/www/html && rm -rf nuit-info-2025'"
+        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@{{ proxmox_api_host }} "pct exec {{ container_id }} -- bash -c 'cd /tmp && rm -rf nuit-info-2025 && git clone --depth 1 --branch {{ deploy_branch }} https://github.com/{{ github_repo }}.git && rm -rf /var/www/html/* && cp -r nuit-info-2025/public/css /var/www/html/ 2>/dev/null || true && cp -r nuit-info-2025/public/js /var/www/html/ 2>/dev/null || true && cp -r nuit-info-2025/public/html/contact /var/www/html/ 2>/dev/null || true && cp -r nuit-info-2025/public/html/diplome /var/www/html/ 2>/dev/null || true && cp nuit-info-2025/public/html/index.html /var/www/html/index.html && chown -R www-data:www-data /var/www/html && chmod -R 755 /var/www/html && rm -rf nuit-info-2025'"
       register: deploy_files
       ignore_errors: yes
       changed_when: deploy_files.rc == 0
       when: install_nginx.rc == 0 and proxmox_ssh_private_key is defined
+
+    - name: Verify deployed files
+      shell: |
+        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@{{ proxmox_api_host }} "pct exec {{ container_id }} -- bash -c 'echo \"=== Files in /var/www/html ===\" && ls -la /var/www/html && echo \"=== Files in /var/www/html/contact ===\" && ls -la /var/www/html/contact 2>/dev/null || echo \"contact directory not found\" && echo \"=== Files in /var/www/html/diplome ===\" && ls -la /var/www/html/diplome 2>/dev/null || echo \"diplome directory not found\"'"
+      register: verify_files
+      ignore_errors: yes
+      when: deploy_files.rc == 0 and proxmox_ssh_private_key is defined
+
+    - name: Show verification result
+      debug:
+        msg: "{{ verify_files.stdout if verify_files.rc == 0 else 'Verification failed' }}"
+      when: verify_files.rc == 0
 
     - name: Enable and start nginx via pct exec
       shell: |
