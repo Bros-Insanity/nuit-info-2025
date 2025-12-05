@@ -1,0 +1,46 @@
+# Configuration nginx pour Winux
+# À placer dans /etc/nginx/sites-available/winux ou intégrer dans votre configuration existante
+
+server {
+    listen 80;
+    server_name _;  # Remplacez par votre nom de domaine si nécessaire
+    
+    root /var/www/html;
+    index index.html;
+    
+    # Servir les fichiers statiques
+    location / {
+        try_files $uri $uri/ =404;
+    }
+    
+    # Proxy pour l'API Winux
+    location /api/winux {
+        proxy_pass http://127.0.0.1:5000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        
+        # Timeouts pour les requêtes longues (création de session)
+        proxy_connect_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_read_timeout 300s;
+        
+        # Headers CORS (optionnel, Flask-CORS gère déjà cela)
+        add_header Access-Control-Allow-Origin * always;
+        add_header Access-Control-Allow-Methods "GET, POST, DELETE, OPTIONS" always;
+        add_header Access-Control-Allow-Headers "Content-Type, Authorization" always;
+        
+        # Gérer les requêtes OPTIONS pour CORS
+        if ($request_method = OPTIONS) {
+            return 204;
+        }
+    }
+    
+    # Servir le client Winux
+    location /winux {
+        alias /var/www/html/winux;
+        try_files $uri $uri/ /winux/index.html;
+    }
+}
+
