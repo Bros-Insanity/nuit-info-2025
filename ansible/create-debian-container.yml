@@ -219,7 +219,7 @@
             -o StrictHostKeyChecking=no \
             -o ConnectTimeout=10 \
             root@{{ proxmox_api_host }} \
-            "pct exec {{ container_id }} -- bash -c 'export DEBIAN_FRONTEND=noninteractive && apt-get update && apt-get install -y ca-certificates curl gnupg && install -m 0755 -d /etc/apt/keyrings && curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg && chmod a+r /etc/apt/keyrings/docker.gpg && echo \"deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian $(. /etc/os-release && echo \"\$VERSION_CODENAME\") stable\" | tee /etc/apt/sources.list.d/docker.list > /dev/null && apt-get update && apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin'"
+            "pct exec {{ container_id }} -- bash -c 'export DEBIAN_FRONTEND=noninteractive && apt-get update && apt-get install -y ca-certificates curl gnupg && install -m 0755 -d /etc/apt/keyrings && curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg && chmod a+r /etc/apt/keyrings/docker.gpg && ARCH=$(dpkg --print-architecture) && CODENAME=$(grep VERSION_CODENAME /etc/os-release | cut -d= -f2) && echo \"deb [arch=\\\$ARCH signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian \\\$CODENAME stable\" | tee /etc/apt/sources.list.d/docker.list > /dev/null && apt-get update && apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin'"
       register: install_docker
       ignore_errors: yes
       changed_when: install_docker.rc == 0
