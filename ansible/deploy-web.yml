@@ -128,41 +128,9 @@
       pause:
         seconds: 5
 
-    # --- Configuration cloud-init pour installation automatique ---
-    - name: Create cloud-init user-data
-      set_fact:
-        cloud_init_user_data: |
-          #cloud-config
-          password: root
-          chpasswd:
-            expire: false
-          ssh_pwauth: true
-          runcmd:
-            - export DEBIAN_FRONTEND=noninteractive
-            - apt-get update
-            - apt-get install -y nginx curl
-            - curl -o /var/www/html/index.html {{ github_repo }}
-            - systemctl enable --now nginx
-
-    - name: Encode cloud-init user-data in base64
-      set_fact:
-        cloud_init_encoded: "{{ cloud_init_user_data | b64encode }}"
-
-    - name: Configure cloud-init via API
-      uri:
-        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/lxc/{{ container_id }}/config"
-        method: PUT
-        headers:
-          Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
-        body_format: form-urlencoded
-        body:
-          cicustom: "user=base64:{{ cloud_init_encoded }}"
-        validate_certs: no
-        status_code: [200, 202]
-      register: cloud_init_config
-      ignore_errors: yes
-
-    # --- Demarrage du container (cloud-init s'executera automatiquement) ---
+    # --- Demarrage du container ---
+    # Note: Pour installer nginx automatiquement, on utilise pct exec qui necessite SSH vers Proxmox
+    # Sans SSH, le container sera cree mais nginx devra etre installe manuellement
     - name: Start container
       uri:
         url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/lxc/{{ container_id }}/status/start"
@@ -173,9 +141,23 @@
         status_code: [200, 202]
       register: start_result
 
-    - name: Wait for cloud-init to complete
+    - name: Wait for container to be ready
       pause:
-        seconds: 90
+        seconds: 30
+
+    # --- Installation via pct exec (necessite SSH vers Proxmox) ---
+    # Sans SSH, cette etape echouera mais on affichera les instructions
+    - name: Install nginx and deploy via pct exec
+      shell: |
+        ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@{{ proxmox_api_host }} "pct exec {{ container_id }} -- bash -c 'export DEBIAN_FRONTEND=noninteractive && apt-get update && apt-get install -y nginx curl && curl -s -o /var/www/html/index.html {{ github_repo }} && systemctl enable --now nginx'"
+      register: install_result
+      ignore_errors: yes
+      changed_when: install_result.rc == 0
+
+    - name: Wait for nginx installation
+      pause:
+        seconds: 30
+      when: install_result.rc == 0
 
     - name: Display deployment status
       debug:
@@ -185,12 +167,12 @@
           Gateway: {{ container_gateway }}
           DNS: {{ container_dns }}
           Web: http://10.0.0.20/
-          {% if cloud_init_config.status == 200 %}
-          Cloud-init configure! Nginx et test.html seront installes automatiquement au demarrage.
+          {% if install_result.rc == 0 %}
+          Nginx installe et test.html deploye avec succes!
           {% else %}
-          Note: Cloud-init n'a pas pu etre configure. Le template Debian standard ne supporte peut-etre pas cloud-init.
-          Depuis Proxmox, executez manuellement:
-          pct exec {{ container_id }} -- bash -c 'apt-get update && apt-get install -y nginx curl && curl -o /var/www/html/index.html {{ github_repo }} && systemctl enable --now nginx'
+          Note: L'installation automatique necessite un acces SSH au serveur Proxmox.
+          Depuis Proxmox (10.0.0.100), executez:
+          pct exec {{ container_id }} -- bash -c 'export DEBIAN_FRONTEND=noninteractive && apt-get update && apt-get install -y nginx curl && curl -o /var/www/html/index.html {{ github_repo }} && systemctl enable --now nginx'
           {% endif %}
 
     - name: Show result
