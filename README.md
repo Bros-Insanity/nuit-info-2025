@@ -1,6 +1,6 @@
 # Nuit de l'Info 2025 - Déploiement Automatique
 
-## 📖 À propos du projet
+## À propos du projet
 
 Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
 
@@ -8,7 +8,7 @@ Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deseru
 
 Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt. Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit, sed quia non numquam eius modi tempora incidunt ut labore et dolore magnam aliquam quaerat voluptatem.
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 GitHub → Semaphore CI/CD → Ansible → Proxmox → Container LXC → Nginx
@@ -20,7 +20,7 @@ GitHub → Semaphore CI/CD → Ansible → Proxmox → Container LXC → Nginx
 - **Proxmox** : Héberge le container LXC
 - **Container** : Exécute nginx et sert la page web
 
-## 📋 Prérequis
+## Prérequis
 
 Avant de commencer, tu auras besoin de :
 
@@ -31,7 +31,7 @@ Avant de commencer, tu auras besoin de :
 3. **Un compte GitHub** avec ce repository
 4. **Un utilisateur Proxmox** avec les permissions nécessaires (nous utilisons `terraform@pam`)
 
-## 🔧 Guide d'installation
+## Guide d'installation
 
 Ce projet permet de déployer automatiquement un serveur web sur Proxmox via Semaphore CI/CD. Chaque fois que tu pousses du code sur GitHub, Semaphore lance automatiquement un playbook Ansible qui crée un container Debian, installe nginx et déploie ta page web.
 
