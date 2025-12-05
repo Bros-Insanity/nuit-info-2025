@@ -1,0 +1,90 @@
+version: v1.0
+name: Winux API - Déploiement Docker
+agent:
+  machine:
+    type: e1-standard-2
+    os_image: ubuntu2004
+
+blocks:
+  - name: Build Docker Image
+    task:
+      jobs:
+        - name: Build Winux API Image
+          commands:
+            - checkout
+            - echo "🔨 Construction de l'image Docker Winux API..."
+            - docker build -t winux-api:latest -f Dockerfile .
+            - echo "✅ Image construite avec succès"
+            - docker images | grep winux-api
+
+  - name: Test API Health
+    task:
+      jobs:
+        - name: Test API Container
+          commands:
+            - checkout
+            - echo "🧪 Test de l'API dans un container..."
+            - |
+              docker run -d \
+                --name winux-api-test \
+                -p 127.0.0.1:5001:5000 \
+                -e NODE_ENV=production \
+                -e PORT=5000 \
+                -e HOST=0.0.0.0 \
+                winux-api:latest
+            - sleep 5
+            - |
+              if curl -f http://localhost:5001/api/winux/health; then
+                echo "✅ API répond correctement"
+              else
+                echo "❌ API ne répond pas"
+                docker logs winux-api-test
+                exit 1
+              fi
+            - docker stop winux-api-test
+            - docker rm winux-api-test
+            - echo "✅ Tests réussis"
+
+  - name: Deploy to Server
+    task:
+      secrets:
+        - name: proxmox-ssh-key
+        - name: proxmox-host
+      jobs:
+        - name: Deploy Winux API Container
+          commands:
+            - checkout
+            - echo "🚀 Déploiement de l'API Winux sur le serveur..."
+            - |
+              # Créer le répertoire de travail sur le serveur
+              ssh -i ~/.ssh/proxmox_key -o StrictHostKeyChecking=no root@${PROXMOX_HOST} \
+                "mkdir -p /opt/winux-api"
+            - |
+              # Copier les fichiers nécessaires
+              scp -i ~/.ssh/proxmox_key -o StrictHostKeyChecking=no \
+                Dockerfile \
+                docker-compose.yml \
+                api_winux.js \
+                package.json \
+                root@${PROXMOX_HOST}:/opt/winux-api/
+            - |
+              # Arrêter et supprimer l'ancien container s'il existe
+              ssh -i ~/.ssh/proxmox_key -o StrictHostKeyChecking=no root@${PROXMOX_HOST} \
+                "cd /opt/winux-api && \
+                 docker-compose down 2>/dev/null || true && \
+                 docker rm -f winux-api 2>/dev/null || true"
+            - |
+              # Construire et démarrer le nouveau container
+              ssh -i ~/.ssh/proxmox_key -o StrictHostKeyChecking=no root@${PROXMOX_HOST} \
+                "cd /opt/winux-api && \
+                 docker-compose build && \
+                 docker-compose up -d"
+            - |
+              # Vérifier que le container tourne
+              ssh -i ~/.ssh/proxmox_key -o StrictHostKeyChecking=no root@${PROXMOX_HOST} \
+                "sleep 5 && \
+                 docker ps | grep winux-api && \
+                 (curl -f http://localhost:5000/api/winux/health || wget -q -O- http://localhost:5000/api/winux/health) && \
+                 echo '✅ API déployée et opérationnelle'"
+            - echo "✅ Déploiement terminé avec succès"
+

@@ -1,0 +1,43 @@
+version: v1.0
+name: Winux API - Déploiement Simple
+agent:
+  machine:
+    type: e1-standard-2
+    os_image: ubuntu2004
+
+blocks:
+  - name: Build and Deploy
+    task:
+      secrets:
+        - name: proxmox-ssh-key
+        - name: proxmox-host
+      jobs:
+        - name: Build and Deploy Winux API
+          commands:
+            - checkout
+            - echo "🔨 Construction de l'image Docker..."
+            - docker build -t winux-api:latest -f Dockerfile .
+            - echo "✅ Image construite"
+            - |
+              # Créer le répertoire sur le serveur
+              ssh -i ~/.ssh/proxmox_key -o StrictHostKeyChecking=no root@${PROXMOX_HOST} \
+                "mkdir -p /opt/winux-api"
+            - |
+              # Sauvegarder l'image et la transférer
+              docker save winux-api:latest | gzip > winux-api.tar.gz
+              scp -i ~/.ssh/proxmox_key -o StrictHostKeyChecking=no \
+                winux-api.tar.gz \
+                docker-compose.yml \
+                root@${PROXMOX_HOST}:/opt/winux-api/
+            - |
+              # Charger l'image et démarrer le container
+              ssh -i ~/.ssh/proxmox_key -o StrictHostKeyChecking=no root@${PROXMOX_HOST} \
+                "cd /opt/winux-api && \
+                 gunzip -c winux-api.tar.gz | docker load && \
+                 docker-compose down 2>/dev/null || true && \
+                 docker-compose up -d && \
+                 sleep 3 && \
+                 docker ps | grep winux-api && \
+                 curl -f http://localhost:5000/api/winux/health && \
+                 echo '✅ API déployée avec succès'"
+
