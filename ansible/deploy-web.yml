@@ -60,7 +60,7 @@
         seconds: 5
       when: container_check.status == 200
 
-    # --- Telechargement du template Debian standard ---
+    # --- Telechargement du template TurnKey avec nginx ---
     - name: Get current templates on storage
       uri:
         url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/storage/local/content"
@@ -70,11 +70,11 @@
         validate_certs: no
       register: current_templates
 
-    - name: Check if Debian standard template exists
+    - name: Check if turnkey-nginx template exists
       set_fact:
-        debian_standard_exists: "{{ current_templates.json.data | selectattr('volid', 'search', 'debian-12-standard') | list | length > 0 }}"
+        turnkey_nginx_exists: "{{ current_templates.json.data | selectattr('volid', 'search', 'turnkey-nginx') | list | length > 0 }}"
 
-    - name: Download Debian 12 standard template
+    - name: Download TurnKey nginx template
       uri:
         url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/storage/local/download-url"
         method: POST
@@ -82,23 +82,23 @@
           Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
         body_format: form-urlencoded
         body:
-          url: "http://download.proxmox.com/images/system/debian-12-standard_12.7-1_amd64.tar.zst"
+          url: "http://mirror.turnkeylinux.org/turnkeylinux/images/proxmox/turnkey-nginx_18.0-1_amd64.tar.gz"
           content: "vztmpl"
-          filename: "debian-12-standard_12.7-1_amd64.tar.zst"
+          filename: "turnkey-nginx_18.0-1_amd64.tar.gz"
         validate_certs: no
         status_code: [200, 202]
-      register: download_template
-      when: not debian_standard_exists
+      register: download_turnkey_nginx
+      when: not turnkey_nginx_exists
 
-    - name: Wait for template download
+    - name: Wait for turnkey-nginx template download
       pause:
-        seconds: 30
-      when: not debian_standard_exists
+        seconds: 90
+      when: not turnkey_nginx_exists
 
     - name: Set template to use
       set_fact:
         existing_template:
-          volid: "local:vztmpl/debian-12-standard_12.7-1_amd64.tar.zst"
+          volid: "local:vztmpl/turnkey-nginx_18.0-1_amd64.tar.gz"
 
     # --- Creation du container avec IP fixe ---
     - name: Create LXC container with static IP
@@ -128,8 +128,17 @@
       pause:
         seconds: 5
 
-    # --- Installation via commandes inline executees au demarrage ---
-    # On demarre le container et on attend qu'il soit pret
+    # --- Bypass TurnKey initialization (optionnel) ---
+    # Les templates TurnKey necessitent une initialisation, mais on peut la bypasser
+    # en creant le fichier de configuration d'initialisation
+    - name: Bypass TurnKey initialization
+      shell: |
+        ssh -o StrictHostKeyChecking=no root@{{ proxmox_api_host }} "pct exec {{ container_id }} -- bash -c 'touch /etc/turnkey-init.done && echo \"root:root\" | chpasswd'"
+      register: bypass_init
+      ignore_errors: yes
+      changed_when: false
+
+    # --- Demarrage du container (nginx deja installe dans TurnKey) ---
     - name: Start container
       uri:
         url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/lxc/{{ container_id }}/status/start"
@@ -140,25 +149,43 @@
         status_code: [200, 202]
       register: start_result
 
-    - name: Wait for container to be ready
+    - name: Wait for container and nginx to be ready
       pause:
-        seconds: 30
+        seconds: 45
 
-    # Note: L'installation de nginx doit etre faite manuellement ou via SSH
-    # Pour automatiser, il faut soit:
-    # 1. Avoir acces SSH au serveur Proxmox pour utiliser 'pct exec'
-    # 2. Configurer SSH dans le container et utiliser Ansible normalement
-    # 3. Utiliser un script d'initialisation dans le template
-    - name: Display manual installation instructions
+    # --- Deploiement du fichier test.html ---
+    # Note: TurnKey nginx a deja nginx installe, on doit juste remplacer le contenu
+    # On utilise l'API Proxmox pour executer des commandes via pct exec
+    # Si SSH vers Proxmox n'est pas disponible, il faudra le faire manuellement
+    - name: Deploy test.html via pct exec (requires SSH to Proxmox)
+      shell: |
+        ssh -o StrictHostKeyChecking=no root@{{ proxmox_api_host }} "pct exec {{ container_id }} -- curl -s -o /var/www/html/index.html {{ github_repo }}"
+      register: deploy_file
+      ignore_errors: yes
+      changed_when: false
+
+    - name: Restart nginx to apply changes
+      shell: |
+        ssh -o StrictHostKeyChecking=no root@{{ proxmox_api_host }} "pct exec {{ container_id }} -- systemctl restart nginx"
+      register: restart_nginx
+      ignore_errors: yes
+      changed_when: false
+      when: deploy_file.rc == 0
+
+    - name: Display deployment status
       debug:
         msg: |
-          Container {{ container_id }} cree avec IP {{ container_ip }}
-          Pour installer nginx, connectez-vous au container et executez:
-          ssh root@10.0.0.20 (apres configuration du mot de passe)
-          OU
-          Depuis le serveur Proxmox: pct exec {{ container_id }} -- apt-get update && apt-get install -y nginx curl
-          pct exec {{ container_id }} -- curl -o /var/www/html/index.html {{ github_repo }}
-          pct exec {{ container_id }} -- systemctl enable --now nginx
+          Container {{ container_id }} ({{ container_name }}) deploye avec template TurnKey nginx!
+          IP: {{ container_ip }}
+          Gateway: {{ container_gateway }}
+          DNS: {{ container_dns }}
+          Web: http://10.0.0.20/
+          {% if deploy_file.rc != 0 %}
+          Note: Le fichier test.html doit etre deploye manuellement:
+          Depuis Proxmox: pct exec {{ container_id }} -- curl -o /var/www/html/index.html {{ github_repo }}
+          {% else %}
+          Fichier test.html deploye avec succes!
+          {% endif %}
 
     - name: Show result
       debug:
