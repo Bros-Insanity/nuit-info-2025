@@ -1,39 +1,32 @@
 ---
-- name: Create Winux Temporary Session
+- name: Créer une session Winux temporaire
   hosts: localhost
   connection: local
   gather_facts: no
 
   vars:
     session_id: "{{ session_id | default('winux-' + ansible_date_time.epoch) }}"
-    container_id: "{{ container_id | default(30001) }}"
+    container_id: "{{ container_id | required }}"
     container_name: "winux-session-{{ session_id }}"
-    container_memory: 1024
+    container_memory: 1024  # MB
     container_cores: 2
-    container_disk: 10
+    container_disk: 10  # GB
     container_ip_base: "10.0.0"
     container_gateway: "10.0.0.254"
     container_dns: "1.1.1.1"
     session_duration: "{{ session_duration | default(30) }}"  # minutes
-    winux_template: "debian-12-standard"
+    debian_template_url: "http://download.proxmox.com/images/system/debian-12-standard_12.7-1_amd64.tar.zst"
+    debian_template_filename: "debian-12-standard_12.7-1_amd64.tar.zst"
 
   tasks:
-    - name: Generate unique container ID
+    - name: Calculer l'adresse IP du container
       set_fact:
-        unique_container_id: "{{ 30000 + (session_id | regex_replace('.*-', '') | int) % 1000 }}"
-      when: container_id == 30001
+        container_ip: "{{ container_ip_base }}.{{ (container_id | int) % 254 + 1 }}/24"
+        container_ip_clean: "{{ container_ip_base }}.{{ (container_id | int) % 254 + 1 }}"
 
-    - name: Set final container ID
-      set_fact:
-        final_container_id: "{{ unique_container_id if container_id == 30001 else container_id }}"
-
-    - name: Calculate container IP
-      set_fact:
-        container_ip: "{{ container_ip_base }}.{{ (final_container_id | int) % 254 + 1 }}/24"
-
-    - name: Check if container exists
+    - name: Vérifier si le container existe déjà
       uri:
-        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/lxc/{{ final_container_id }}/status/current"
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/lxc/{{ container_id }}/status/current"
         method: GET
         headers:
           Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
@@ -42,9 +35,9 @@
       register: container_check
       ignore_errors: yes
 
-    - name: Stop existing container if exists
+    - name: Arrêter le container existant s'il existe
       uri:
-        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/lxc/{{ final_container_id }}/status/stop"
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/lxc/{{ container_id }}/status/stop"
         method: POST
         headers:
           Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
@@ -53,14 +46,14 @@
       when: container_check.status == 200
       ignore_errors: yes
 
-    - name: Wait for container to stop
+    - name: Attendre l'arrêt du container
       pause:
         seconds: 5
       when: container_check.status == 200
 
-    - name: Delete existing container if exists
+    - name: Supprimer le container existant s'il existe
       uri:
-        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/lxc/{{ final_container_id }}"
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/lxc/{{ container_id }}"
         method: DELETE
         headers:
           Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
@@ -69,12 +62,12 @@
       when: container_check.status == 200
       ignore_errors: yes
 
-    - name: Wait for container deletion
+    - name: Attendre la suppression du container
       pause:
         seconds: 5
       when: container_check.status == 200
 
-    - name: Get current templates on storage
+    - name: Récupérer la liste des templates disponibles
       uri:
         url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/storage/local/content"
         method: GET
@@ -83,11 +76,11 @@
         validate_certs: no
       register: current_templates
 
-    - name: Check if Debian standard template exists
+    - name: Vérifier si le template Debian existe
       set_fact:
-        debian_standard_exists: "{{ current_templates.json.data | selectattr('volid', 'search', 'debian-12-standard') | list | length > 0 }}"
+        debian_template_exists: "{{ current_templates.json.data | selectattr('volid', 'search', 'debian-12-standard') | list | length > 0 }}"
 
-    - name: Download Debian 12 standard template if needed
+    - name: Télécharger le template Debian 12 si nécessaire
       uri:
         url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/storage/local/download-url"
         method: POST
@@ -95,25 +88,24 @@
           Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
         body_format: form-urlencoded
         body:
-          url: "http://download.proxmox.com/images/system/debian-12-standard_12.7-1_amd64.tar.zst"
+          url: "{{ debian_template_url }}"
           content: "vztmpl"
-          filename: "debian-12-standard_12.7-1_amd64.tar.zst"
+          filename: "{{ debian_template_filename }}"
         validate_certs: no
         status_code: [200, 202]
       register: download_template
-      when: not debian_standard_exists
+      when: not debian_template_exists
 
-    - name: Wait for template download
+    - name: Attendre le téléchargement du template
       pause:
         seconds: 60
-      when: not debian_standard_exists
+      when: not debian_template_exists
 
-    - name: Set template to use
+    - name: Définir le template à utiliser
       set_fact:
-        existing_template:
-          volid: "local:vztmpl/debian-12-standard_12.7-1_amd64.tar.zst"
+        template_volid: "local:vztmpl/{{ debian_template_filename }}"
 
-    - name: Create LXC container for Winux session
+    - name: Créer le container LXC Winux
       uri:
         url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/lxc"
         method: POST
@@ -121,9 +113,9 @@
           Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
         body_format: form-urlencoded
         body:
-          vmid: "{{ final_container_id }}"
+          vmid: "{{ container_id }}"
           hostname: "{{ container_name }}"
-          ostemplate: "{{ existing_template.volid }}"
+          ostemplate: "{{ template_volid }}"
           storage: "data"
           memory: "{{ container_memory }}"
           cores: "{{ container_cores }}"
@@ -136,63 +128,82 @@
         status_code: [200, 202]
       register: create_result
 
-    - name: Wait for container to be ready
+    - name: Attendre que le container soit prêt
       pause:
         seconds: 30
 
-    - name: Create SSH key file from environment
+    - name: Créer le fichier de clé SSH depuis l'environnement
       copy:
-        content: |
-          {{ proxmox_ssh_private_key }}
+        content: "{{ proxmox_ssh_private_key }}"
         dest: "/tmp/proxmox_ssh_key"
         mode: '0600'
       when: proxmox_ssh_private_key is defined
       ignore_errors: yes
       no_log: true
 
-    - name: Install Winux dependencies via pct exec
+    - name: Installer les dépendances Winux (XFCE, XRDP, etc.)
       shell: |
-        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@{{ proxmox_api_host }} "pct exec {{ final_container_id }} -- bash -c 'export DEBIAN_FRONTEND=noninteractive && apt-get update && apt-get install -y xfce4 xfce4-goodies xrdp firefox curl wget git'"
+        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} \
+            -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=10 \
+            root@{{ proxmox_api_host }} \
+            "pct exec {{ container_id }} -- bash -c 'export DEBIAN_FRONTEND=noninteractive && \
+            apt-get update && \
+            apt-get install -y xfce4 xfce4-goodies xrdp firefox curl wget git vim'"
       register: install_winux
       ignore_errors: yes
       changed_when: install_winux.rc == 0
       when: proxmox_ssh_private_key is defined
 
-    - name: Configure XRDP for remote access
+    - name: Configurer XRDP pour l'accès distant
       shell: |
-        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@{{ proxmox_api_host }} "pct exec {{ final_container_id }} -- bash -c 'echo \"xfce4-session\" > /etc/xrdp/startwm.sh && chmod +x /etc/xrdp/startwm.sh && systemctl enable --now xrdp'"
+        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} \
+            -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=10 \
+            root@{{ proxmox_api_host }} \
+            "pct exec {{ container_id }} -- bash -c 'echo \"xfce4-session\" > /etc/xrdp/startwm.sh && \
+            chmod +x /etc/xrdp/startwm.sh && \
+            systemctl enable --now xrdp'"
       register: configure_xrdp
       ignore_errors: yes
       changed_when: configure_xrdp.rc == 0
       when: install_winux.rc == 0 and proxmox_ssh_private_key is defined
 
-    - name: Create session info file
+    - name: Créer le fichier d'information de session
       shell: |
-        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@{{ proxmox_api_host }} "pct exec {{ final_container_id }} -- bash -c 'echo \"SESSION_ID={{ session_id }}\" > /root/session_info && echo \"CREATED_AT=$(date +%s)\" >> /root/session_info && echo \"DURATION={{ session_duration }}\" >> /root/session_info'"
+        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} \
+            -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=10 \
+            root@{{ proxmox_api_host }} \
+            "pct exec {{ container_id }} -- bash -c 'echo \"SESSION_ID={{ session_id }}\" > /root/session_info && \
+            echo \"CREATED_AT=$(date +%s)\" >> /root/session_info && \
+            echo \"DURATION={{ session_duration }}\" >> /root/session_info'"
       register: create_info
       ignore_errors: yes
       when: proxmox_ssh_private_key is defined
 
-    - name: Show session information
+    - name: Afficher les informations de la session
       debug:
         msg: |
-          Session Winux creee avec succes!
+          ============================================
+          Session Winux créée avec succès !
+          ============================================
           Session ID: {{ session_id }}
-          Container ID: {{ final_container_id }}
+          Container ID: {{ container_id }}
           Container Name: {{ container_name }}
-          IP: {{ container_ip }}
-          Acces RDP: {{ container_ip | regex_replace('/24', '') }}:3389
-          Duree: {{ session_duration }} minutes
-          La session sera automatiquement supprimee apres {{ session_duration }} minutes.
+          IP: {{ container_ip_clean }}
+          Accès RDP: {{ container_ip_clean }}:3389
+          Durée: {{ session_duration }} minutes
+          ============================================
+          La session sera automatiquement supprimée après {{ session_duration }} minutes.
 
-    - name: Return session details
+    - name: Retourner les détails de la session
       set_fact:
         session_details:
           session_id: "{{ session_id }}"
-          container_id: "{{ final_container_id }}"
+          container_id: "{{ container_id }}"
           container_name: "{{ container_name }}"
-          container_ip: "{{ container_ip | regex_replace('/24', '') }}"
+          container_ip: "{{ container_ip_clean }}"
           rdp_port: 3389
           created_at: "{{ ansible_date_time.iso8601 }}"
           duration_minutes: "{{ session_duration }}"
-
