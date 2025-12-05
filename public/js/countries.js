@@ -1,4 +1,4 @@
-// Pays
+
 const provinces = [
   "Achaea",
   "Aegyptus",

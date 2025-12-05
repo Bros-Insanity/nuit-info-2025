@@ -1,4 +1,4 @@
-  <script>
+
     const params = new URLSearchParams(window.location.search);
 
     function articleDe(word) {
@@ -53,4 +53,3 @@
     `;
 
     document.getElementById("confirmationMessage").innerHTML = confirmation;
-  </script>
