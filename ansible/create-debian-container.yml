@@ -1,0 +1,87 @@
+---
+- name: Create Debian Container
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    container_id: 30000
+    container_name: "debian-test"
+    container_memory: 512
+    container_cores: 1
+    container_disk: 8
+    container_ip: "10.0.0.20/24"
+    container_gateway: "10.0.0.254"
+    container_dns: "1.1.1.1"
+
+  tasks:
+    - name: Get current templates on storage
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/storage/local/content"
+        method: GET
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
+        validate_certs: no
+      register: current_templates
+
+    - name: Check if Debian standard template exists
+      set_fact:
+        debian_standard_exists: "{{ current_templates.json.data | selectattr('volid', 'search', 'debian-12-standard') | list | length > 0 }}"
+
+    - name: Download Debian 12 standard template
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/storage/local/download-url"
+        method: POST
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
+        body_format: form-urlencoded
+        body:
+          url: "http://download.proxmox.com/images/system/debian-12-standard_12.7-1_amd64.tar.zst"
+          content: "vztmpl"
+          filename: "debian-12-standard_12.7-1_amd64.tar.zst"
+        validate_certs: no
+        status_code: [200, 202]
+      register: download_template
+      when: not debian_standard_exists
+
+    - name: Wait for template download
+      pause:
+        seconds: 60
+      when: not debian_standard_exists
+
+    - name: Set template to use
+      set_fact:
+        existing_template:
+          volid: "local:vztmpl/debian-12-standard_12.7-1_amd64.tar.zst"
+
+    - name: Create LXC container with static IP
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/lxc"
+        method: POST
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
+        body_format: form-urlencoded
+        body:
+          vmid: "{{ container_id }}"
+          hostname: "{{ container_name }}"
+          ostemplate: "{{ existing_template.volid }}"
+          storage: "data"
+          memory: "{{ container_memory }}"
+          cores: "{{ container_cores }}"
+          rootfs: "data:{{ container_disk }}"
+          net0: "name=eth0,bridge=vmbr0,ip={{ container_ip }},gw={{ container_gateway }}"
+          nameserver: "{{ container_dns }}"
+          unprivileged: 1
+          start: 1
+        validate_certs: no
+        status_code: [200, 202]
+      register: create_result
+
+    - name: Show result
+      debug:
+        msg: |
+          Container {{ container_id }} ({{ container_name }}) cree avec succes!
+          IP: {{ container_ip }}
+          Gateway: {{ container_gateway }}
+          DNS: {{ container_dns }}
+
