@@ -13,6 +13,7 @@
     container_ip: "10.0.0.20/24"
     container_gateway: "10.0.0.254"
     container_dns: "1.1.1.1"
+    github_repo: "https://raw.githubusercontent.com/Bros-Insanity/nuit-info-2025/formulaire/test.html"
 
   tasks:
     - name: Check if container exists
@@ -120,6 +121,33 @@
         status_code: [200, 202]
       register: create_result
 
+    - name: Wait for container to be ready
+      pause:
+        seconds: 30
+
+    - name: Install nginx and curl via pct exec
+      shell: |
+        ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@{{ proxmox_api_host }} "pct exec {{ container_id }} -- bash -c 'export DEBIAN_FRONTEND=noninteractive && apt-get update && apt-get install -y nginx curl'"
+      register: install_nginx
+      ignore_errors: yes
+      changed_when: install_nginx.rc == 0
+
+    - name: Download test.html via pct exec
+      shell: |
+        ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@{{ proxmox_api_host }} "pct exec {{ container_id }} -- curl -s -o /var/www/html/index.html {{ github_repo }}"
+      register: download_file
+      ignore_errors: yes
+      changed_when: download_file.rc == 0
+      when: install_nginx.rc == 0
+
+    - name: Enable and start nginx via pct exec
+      shell: |
+        ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@{{ proxmox_api_host }} "pct exec {{ container_id }} -- systemctl enable --now nginx"
+      register: start_nginx
+      ignore_errors: yes
+      changed_when: start_nginx.rc == 0
+      when: install_nginx.rc == 0
+
     - name: Show result
       debug:
         msg: |
@@ -127,4 +155,10 @@
           IP: {{ container_ip }}
           Gateway: {{ container_gateway }}
           DNS: {{ container_dns }}
+          Web: http://10.0.0.20/
+          {% if install_nginx.rc == 0 %}
+          Nginx installe et test.html deploye avec succes!
+          {% else %}
+          Note: Installation nginx necessite un acces SSH au serveur Proxmox ({{ proxmox_api_host }})
+          {% endif %}
 
