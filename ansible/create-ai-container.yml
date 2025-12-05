@@ -162,7 +162,7 @@
 
     - name: Install postfix, pip and git and imap via pct exec
       shell: |
-        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@{{ proxmox_api_host }} "pct exec {{ container_id }} -- bash -c 'export DEBIAN_FRONTEND=noninteractive && echo \"postfix postfix/main_mailer_type select \\\"Internet Site\\\"\" | debconf-set-selections && echo \"postfix postfix/mailname string localhost\" | debconf-set-selections && apt-get update && apt-get install -y postfix && dpkg-reconfigure -f noninteractive postfix && service postfix start && apt install python3-pip dovecot-imapd && sed -i \"s/^#mail_location = .*/mail_location = maildir:~\/Maildir/\" /etc/dovecot/conf.d/10-mail.conf && sed -i \"s/^#disable_plaintext_auth = yes/disable_plaintext_auth = no/\" /etc/dovecot/conf.d/10-auth.conf && sed -i \"s/^#auth_mechanisms = plain/auth_mechanisms = plain login/\" /etc/dovecot/conf.d/10-auth.conf && service dovecot restart'"
+        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@{{ proxmox_api_host }} "pct exec {{ container_id }} -- bash -c 'export DEBIAN_FRONTEND=noninteractive && echo \"postfix postfix/main_mailer_type select \\\"Internet Site\\\"\" | debconf-set-selections && echo \"postfix postfix/mailname string localhost\" | debconf-set-selections && apt-get update && apt-get install -y postfix && dpkg-reconfigure -f noninteractive postfix && service postfix start && apt install -y python3-pip dovecot-imapd && sed -i \"s/^#mail_location = .*/mail_location = maildir:~\/Maildir/\" /etc/dovecot/conf.d/10-mail.conf && sed -i \"s/^#disable_plaintext_auth = yes/disable_plaintext_auth = no/\" /etc/dovecot/conf.d/10-auth.conf && sed -i \"s/^#auth_mechanisms = plain/auth_mechanisms = plain login/\" /etc/dovecot/conf.d/10-auth.conf && service dovecot restart'"
       register: install_postfix
       ignore_errors: yes
       changed_when: install_postfix.rc == 0
@@ -223,7 +223,7 @@
           Gateway: {{ container_gateway }}
           DNS: {{ container_dns }}
           Web: http://10.0.0.20/
-          {% if install_nginx.rc == 0 %}
+          {% if install_postfix.rc == 0 %}
           Postfi installe et site web deploye avec succes!
           {% else %}
           Note: Installation nginx necessite un acces SSH au serveur Proxmox ({{ proxmox_api_host }})
