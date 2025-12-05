@@ -231,46 +231,23 @@
             -o StrictHostKeyChecking=no \
             -o ConnectTimeout=10 \
             root@{{ proxmox_api_host }} \
-            "pct exec {{ container_id }} -- bash -c 'cd /opt/nuit-info-2025 && pip3 install -r requirements_winux.txt'"
+            "pct exec {{ container_id }} -- bash -c 'cd /opt/nuit-info-2025 && pip3 install --break-system-packages -r requirements_winux.txt'"
       register: install_api_deps
       ignore_errors: yes
       changed_when: install_api_deps.rc == 0
-      when: install_python.rc == 0 and deploy_files.rc == 0 and proxmox_ssh_private_key is defined
+      when: install_python is defined and install_python.rc == 0 and deploy_files is defined and deploy_files.rc == 0 and proxmox_ssh_private_key is defined
 
-    - name: Créer le service systemd pour l'API Winux
+    - name: Créer le service systemd et démarrer l'API Winux
       shell: |
         ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} \
             -o StrictHostKeyChecking=no \
             -o ConnectTimeout=10 \
             root@{{ proxmox_api_host }} \
-            "pct exec {{ container_id }} -- bash -c 'printf \"[Unit]\\nDescription=API Winux Flask\\nAfter=network.target\\n\\n[Service]\\nType=simple\\nUser=root\\nWorkingDirectory=/opt/nuit-info-2025\\nEnvironment=\\\"PATH=/usr/bin:/usr/local/bin\\\"\\nExecStart=/usr/bin/python3 /opt/nuit-info-2025/api_winux.py\\nRestart=always\\nRestartSec=10\\n\\n[Install]\\nWantedBy=multi-user.target\\n\" > /etc/systemd/system/winux-api.service'"
-      register: create_api_service
+            "pct exec {{ container_id }} -- bash -c 'printf \"[Unit]\\nDescription=API Winux Flask\\nAfter=network.target\\n\\n[Service]\\nType=simple\\nUser=root\\nWorkingDirectory=/opt/nuit-info-2025\\nEnvironment=\\\"PATH=/usr/bin:/usr/local/bin\\\"\\nExecStart=/usr/bin/python3 /opt/nuit-info-2025/api_winux.py\\nRestart=always\\nRestartSec=10\\n\\n[Install]\\nWantedBy=multi-user.target\\n\" > /etc/systemd/system/winux-api.service && systemctl daemon-reload && systemctl enable --now winux-api'"
+      register: setup_api_service
       ignore_errors: yes
-      changed_when: create_api_service.rc == 0
-      when: install_api_deps.rc == 0 and proxmox_ssh_private_key is defined
-
-    - name: Recharger systemd et démarrer l'API Winux
-      shell: |
-        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} \
-            -o StrictHostKeyChecking=no \
-            -o ConnectTimeout=10 \
-            root@{{ proxmox_api_host }} \
-            "pct exec {{ container_id }} -- bash -c 'systemctl daemon-reload && systemctl enable --now winux-api'"
-      register: start_api_service
-      ignore_errors: yes
-      changed_when: start_api_service.rc == 0
-      when: create_api_service.rc == 0 and proxmox_ssh_private_key is defined
-
-    - name: Vérifier le statut de l'API Winux
-      shell: |
-        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} \
-            -o StrictHostKeyChecking=no \
-            -o ConnectTimeout=10 \
-            root@{{ proxmox_api_host }} \
-            "pct exec {{ container_id }} -- systemctl status winux-api --no-pager -l"
-      register: api_status
-      ignore_errors: yes
-      when: start_api_service.rc == 0 and proxmox_ssh_private_key is defined
+      changed_when: setup_api_service.rc == 0
+      when: install_api_deps is defined and install_api_deps.rc == 0 and proxmox_ssh_private_key is defined
 
     - name: Show result
       debug:
