@@ -1,10 +1,10 @@
-# 🌙 Nuit de l'Info 2025 - Projet Complet
+# Nuit de l'Info 2025 - Projet Complet
 
 Projet développé dans le cadre de la Nuit de l'Info 2025 par **Bros Insanity**. Ce projet comprend plusieurs composants : déploiement automatisé, API Winux, documentation IA éco-responsable, et système de gestion de sessions temporaires.
 
 ---
 
-## 📑 Table des Matières
+## Table des Matières
 
 1. [Vue d'ensemble](#-vue-densemble)
 2. [Architecture](#-architecture)
@@ -17,19 +17,19 @@ Projet développé dans le cadre de la Nuit de l'Info 2025 par **Bros Insanity**
 
 ---
 
-## 🎯 Vue d'ensemble
+## Vue d'ensemble
 
 Ce projet est une plateforme complète comprenant :
 
-- **🌐 Site Web** : Interface principale avec pages de contact, diplômes, et documentation
-- **🚀 API Winux** : Backend Node.js/Express pour gérer des sessions temporaires Windows
-- **📚 Documentation IA** : Documentation interactive sur les modèles d'IA et l'éco-responsabilité
-- **🔄 CI/CD** : Déploiement automatique via Semaphore CI/CD et Ansible
-- **🐳 Docker** : Conteneurisation pour un déploiement simplifié
+- **Site Web** : Interface principale avec pages de contact, diplômes, et documentation
+- **API Winux** : Backend Node.js/Express pour gérer des sessions temporaires Windows
+- **Documentation IA** : Documentation interactive sur les modèles d'IA et l'éco-responsabilité
+- **CI/CD** : Déploiement automatique via Semaphore CI/CD et Ansible
+- **Docker** : Conteneurisation pour un déploiement simplifié
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ### Architecture Globale
 
@@ -49,7 +49,7 @@ GitHub → Semaphore CI/CD → Ansible → Proxmox → Container LXC/Docker → 
 
 ---
 
-## 🧩 Composants du Projet
+## Composants du Projet
 
 ### 1. Site Web Principal
 
@@ -97,7 +97,7 @@ Système de déploiement via :
 
 ---
 
-## ⚙️ Installation et Configuration
+## Installation et Configuration
 
 ### Prérequis
 
@@ -179,7 +179,7 @@ location /api/winux {
 
 ---
 
-## 📚 Documentation Détaillée
+## Documentation Détaillée
 
 ### Documentation par Composant
 
@@ -242,7 +242,7 @@ nuit-info-2025/
 
 ---
 
-## 🚀 Déploiement
+##  Déploiement
 
 ### Déploiement Automatique
 
@@ -287,7 +287,7 @@ Voir [README_WINUX.md](README_WINUX.md) pour plus de détails.
 
 ---
 
-## 🔧 Dépannage
+## Dépannage
 
 ### Problèmes Généraux
 
@@ -351,7 +351,7 @@ Voir [README_WINUX.md](README_WINUX.md) pour plus d'exemples.
 
 ---
 
-## 🔒 Sécurité
+## Sécurité
 
 ### Recommandations
 
@@ -374,7 +374,7 @@ Utilisez les secrets Semaphore ou des fichiers `.env` (non versionnés).
 
 ---
 
-## 📈 Performance
+## Performance
 
 ### Optimisations
 
@@ -391,7 +391,7 @@ Utilisez les secrets Semaphore ou des fichiers `.env` (non versionnés).
 
 ---
 
-## 🔄 Mise à Jour
+## 🔄Mise à Jour
 
 ### Mise à jour du Site Web
 
@@ -419,7 +419,7 @@ pm2 restart winux-api
 
 ---
 
-## 📚 Ressources
+## Ressources
 
 ### Documentation Externe
 
@@ -439,19 +439,22 @@ pm2 restart winux-api
 
 ---
 
-## 👥 Auteurs
+## Auteurs
 
 **Bros Insanity** - Nuit de l'Info 2025
+Andreas Mulard
+Romain Brouard
+Tran Decaudin
 
 ---
 
-## 📝 Licence
+## Licence
 
 Ce projet a été développé dans le cadre de la Nuit de l'Info 2025.
 
 ---
 
-## 🆘 Support
+## Support
 
 Pour toute question ou problème :
 
@@ -462,13 +465,13 @@ Pour toute question ou problème :
 
 ---
 
-## 🎯 Prochaines Étapes
+## Prochaines Étapes
 
-1. ✅ Configuration de l'infrastructure
-2. ✅ Déploiement du site web
-3. ✅ Mise en place de l'API Winux
-4. ✅ Configuration CI/CD
-5. 🔄 Amélioration continue
+1. Configuration de l'infrastructure
+2. Déploiement du site web
+3. Mise en place de l'API Winux
+4.  Configuration CI/CD
+5. Amélioration continue
 
 ---
 
