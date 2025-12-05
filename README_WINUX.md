@@ -236,9 +236,46 @@ const SESSIONS_FILE = '/chemin/vers/votre/fichier.json';
 - Pas d'authentification par défaut (à ajouter si nécessaire)
 - Gestion des erreurs non capturées pour éviter les crashes
 
+## 🐳 Déploiement Docker
+
+### Avec Docker Compose (recommandé)
+
+```bash
+# Construire et démarrer
+docker-compose up -d
+
+# Voir les logs
+docker-compose logs -f
+
+# Arrêter
+docker-compose down
+```
+
+Voir `README_DOCKER.md` pour plus de détails.
+
+### Avec Docker manuel
+
+```bash
+# Construire l'image
+docker build -t winux-api:latest .
+
+# Lancer le container
+docker run -d \
+  --name winux-api \
+  --restart unless-stopped \
+  -p 127.0.0.1:5000:5000 \
+  -v /tmp:/tmp:rw \
+  -e NODE_ENV=production \
+  winux-api:latest
+```
+
 ## 🚀 Production
 
-### Avec PM2 (recommandé)
+### Avec Docker (recommandé)
+
+Voir la section "Déploiement Docker" ci-dessus.
+
+### Avec PM2
 
 ```bash
 # Installation globale

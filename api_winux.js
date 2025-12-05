@@ -355,11 +355,14 @@ setInterval(async () => {
 
 // Démarrage du serveur
 const PORT = process.env.PORT || 5000;
-const HOST = process.env.HOST || '127.0.0.1';
+// Dans un container Docker, écouter sur 0.0.0.0 pour être accessible depuis l'extérieur
+// En local, utiliser 127.0.0.1 pour la sécurité
+const HOST = process.env.HOST || (process.env.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1');
 
 app.listen(PORT, HOST, () => {
     console.log(`🚀 API Winux démarrée sur http://${HOST}:${PORT}`);
     console.log(`📁 Fichier de sessions: ${SESSIONS_FILE}`);
+    console.log(`🌍 Mode: ${process.env.NODE_ENV || 'development'}`);
 });
 
 // Gestion des erreurs non capturées
