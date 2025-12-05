@@ -176,9 +176,13 @@
       changed_when: install_git.rc == 0
       when: install_nginx.rc == 0 and proxmox_ssh_private_key is defined
 
+    - name: Set default branch
+      set_fact:
+        deploy_branch: "{{ github_branch | default('main') }}"
+
     - name: Deploy public directory via git clone
       shell: |
-        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@{{ proxmox_api_host }} "pct exec {{ container_id }} -- bash -c 'cd /tmp && rm -rf nuit-info-2025 && git clone --depth 1 --branch {{ github_branch | default(\"main\") }} https://github.com/{{ github_repo }}.git && cp -r nuit-info-2025/public/* /var/www/html/ && rm -rf nuit-info-2025'"
+        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@{{ proxmox_api_host }} "pct exec {{ container_id }} -- bash -c 'cd /tmp && rm -rf nuit-info-2025 && git clone --depth 1 --branch {{ deploy_branch }} https://github.com/{{ github_repo }}.git && cp -r nuit-info-2025/public/* /var/www/html/ && rm -rf nuit-info-2025'"
       register: deploy_files
       ignore_errors: yes
       changed_when: deploy_files.rc == 0
