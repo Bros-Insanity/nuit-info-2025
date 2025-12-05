@@ -1,0 +1,108 @@
+---
+- name: Installer et configurer l'API Winux dans le container
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    container_id: "{{ container_id | default(30000) }}"
+    github_repo: "Bros-Insanity/nuit-info-2025"
+    github_branch: "{{ github_branch | default('winux-auto-deploy') }}"
+
+  tasks:
+    - name: Créer le fichier de clé SSH depuis l'environnement
+      copy:
+        content: "{{ proxmox_ssh_private_key }}"
+        dest: "/tmp/proxmox_ssh_key"
+        mode: '0600'
+      when: proxmox_ssh_private_key is defined
+      ignore_errors: yes
+      no_log: true
+
+    - name: Installer Python3 et pip dans le container
+      shell: |
+        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} \
+            -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=10 \
+            root@{{ proxmox_api_host }} \
+            "pct exec {{ container_id }} -- bash -c 'export DEBIAN_FRONTEND=noninteractive && apt-get update && apt-get install -y python3 python3-pip python3-venv'"
+      register: install_python
+      ignore_errors: yes
+      changed_when: install_python.rc == 0
+      when: proxmox_ssh_private_key is defined
+
+    - name: Cloner le repository dans le container
+      shell: |
+        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} \
+            -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=10 \
+            root@{{ proxmox_api_host }} \
+            "pct exec {{ container_id }} -- bash -c 'cd /opt && rm -rf nuit-info-2025 && git clone --depth 1 --branch {{ github_branch }} https://github.com/{{ github_repo }}.git'"
+      register: clone_repo
+      ignore_errors: yes
+      changed_when: clone_repo.rc == 0
+      when: install_python.rc == 0 and proxmox_ssh_private_key is defined
+
+    - name: Installer les dépendances Python
+      shell: |
+        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} \
+            -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=10 \
+            root@{{ proxmox_api_host }} \
+            "pct exec {{ container_id }} -- bash -c 'cd /opt/nuit-info-2025 && pip3 install -r requirements_winux.txt'"
+      register: install_deps
+      ignore_errors: yes
+      changed_when: install_deps.rc == 0
+      when: clone_repo.rc == 0 and proxmox_ssh_private_key is defined
+
+    - name: Créer le service systemd pour l'API Winux
+      shell: |
+        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} \
+            -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=10 \
+            root@{{ proxmox_api_host }} \
+            "pct exec {{ container_id }} -- bash -c 'printf \"[Unit]\\nDescription=API Winux Flask\\nAfter=network.target\\n\\n[Service]\\nType=simple\\nUser=root\\nWorkingDirectory=/opt/nuit-info-2025\\nEnvironment=\\\"PATH=/usr/bin:/usr/local/bin\\\"\\nExecStart=/usr/bin/python3 /opt/nuit-info-2025/api_winux.py\\nRestart=always\\nRestartSec=10\\n\\n[Install]\\nWantedBy=multi-user.target\\n\" > /etc/systemd/system/winux-api.service'"
+      register: create_service
+      ignore_errors: yes
+      changed_when: create_service.rc == 0
+      when: install_deps.rc == 0 and proxmox_ssh_private_key is defined
+
+    - name: Recharger systemd et démarrer le service
+      shell: |
+        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} \
+            -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=10 \
+            root@{{ proxmox_api_host }} \
+            "pct exec {{ container_id }} -- bash -c 'systemctl daemon-reload && systemctl enable --now winux-api'"
+      register: start_service
+      ignore_errors: yes
+      changed_when: start_service.rc == 0
+      when: create_service.rc == 0 and proxmox_ssh_private_key is defined
+
+    - name: Vérifier le statut du service
+      shell: |
+        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} \
+            -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=10 \
+            root@{{ proxmox_api_host }} \
+            "pct exec {{ container_id }} -- systemctl status winux-api"
+      register: service_status
+      ignore_errors: yes
+      when: start_service.rc == 0 and proxmox_ssh_private_key is defined
+
+    - name: Afficher le résultat
+      debug:
+        msg: |
+          ============================================
+          Installation de l'API Winux terminée
+          ============================================
+          Container ID: {{ container_id }}
+          Service: winux-api.service
+          API accessible sur: http://localhost:5000/api/winux
+          ============================================
+          {% if start_service.rc == 0 %}
+          Le service a été démarré avec succès.
+          {% else %}
+          Note: L'installation nécessite un accès SSH au serveur Proxmox.
+          {% endif %}
+

@@ -231,23 +231,7 @@
             -o StrictHostKeyChecking=no \
             -o ConnectTimeout=10 \
             root@{{ proxmox_api_host }} \
-            "pct exec {{ container_id }} -- bash -c 'cat > /etc/systemd/system/winux-api.service << EOF
-[Unit]
-Description=API Winux Flask
-After=network.target
-
-[Service]
-Type=simple
-User=root
-WorkingDirectory=/opt/nuit-info-2025
-Environment=\"PATH=/usr/bin:/usr/local/bin\"
-ExecStart=/usr/bin/python3 /opt/nuit-info-2025/api_winux.py
-Restart=always
-RestartSec=10
-
-[Install]
-WantedBy=multi-user.target
-EOF'"
+            "pct exec {{ container_id }} -- bash -c 'printf \"[Unit]\\nDescription=API Winux Flask\\nAfter=network.target\\n\\n[Service]\\nType=simple\\nUser=root\\nWorkingDirectory=/opt/nuit-info-2025\\nEnvironment=\\\"PATH=/usr/bin:/usr/local/bin\\\"\\nExecStart=/usr/bin/python3 /opt/nuit-info-2025/api_winux.py\\nRestart=always\\nRestartSec=10\\n\\n[Install]\\nWantedBy=multi-user.target\\n\" > /etc/systemd/system/winux-api.service'"
       register: create_api_service
       ignore_errors: yes
       changed_when: create_api_service.rc == 0
