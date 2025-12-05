@@ -250,7 +250,7 @@
           {% else %}
           Note: Installation nginx necessite un acces SSH au serveur Proxmox ({{ proxmox_api_host }})
           {% endif %}
-          {% if setup_api_service is defined and setup_api_service.rc == 0 %}
+          {% if setup_api_service is defined and setup_api_service.rc is defined and setup_api_service.rc == 0 %}
           API Winux installee et demarree avec succes!
           API accessible sur: http://localhost:5000/api/winux
           {% else %}
