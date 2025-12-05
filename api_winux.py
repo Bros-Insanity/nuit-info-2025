@@ -398,6 +398,23 @@ def health_check():
             'timestamp': datetime.now().isoformat()
         }), 500
 
+@app.route('/api/winux', methods=['GET'])
+def api_root():
+    """Endpoint racine de l'API pour vérifier qu'elle est accessible"""
+    return jsonify({
+        'success': True,
+        'message': 'API Winux est opérationnelle',
+        'endpoints': {
+            'health': '/api/winux/health',
+            'sessions': '/api/winux/sessions',
+            'create_session': 'POST /api/winux/sessions',
+            'get_session': 'GET /api/winux/sessions/<session_id>',
+            'delete_session': 'DELETE /api/winux/sessions/<session_id>',
+            'cleanup': 'POST /api/winux/cleanup'
+        },
+        'timestamp': datetime.now().isoformat()
+    }), 200
+
 
 @app.errorhandler(404)
 def not_found(error):

@@ -474,7 +474,9 @@
             } catch (error) {
                 let errorMessage = error.message;
                 if (error instanceof SyntaxError) {
-                    errorMessage = 'Erreur de communication avec l\'API. Vérifiez que l\'API Flask est démarrée.';
+                    errorMessage = 'Erreur de communication avec l\'API. Vérifiez que l\'API Flask est démarrée et que nginx est configuré.';
+                } else if (errorMessage.includes('404') || errorMessage.includes('Not Found')) {
+                    errorMessage = 'API non trouvée (404). Vérifiez :\n1. L\'API Flask est démarrée (python3 api_winux.py)\n2. Nginx est configuré pour proxy /api/winux vers localhost:5000\n3. Le service nginx est actif';
                 }
                 showAlert('error', `❌ Erreur: ${errorMessage}`);
                 console.error('Erreur détaillée:', error);
@@ -524,7 +526,9 @@
             } catch (error) {
                 let errorMessage = error.message;
                 if (error instanceof SyntaxError) {
-                    errorMessage = 'Erreur de communication avec l\'API. Vérifiez que l\'API Flask est démarrée.';
+                    errorMessage = 'Erreur de communication avec l\'API. Vérifiez que l\'API Flask est démarrée et que nginx est configuré.';
+                } else if (errorMessage.includes('404') || errorMessage.includes('Not Found')) {
+                    errorMessage = 'API non trouvée (404). Vérifiez :\n1. L\'API Flask est démarrée (python3 api_winux.py)\n2. Nginx est configuré pour proxy /api/winux vers localhost:5000\n3. Le service nginx est actif';
                 }
                 showAlert('error', `❌ Erreur: ${errorMessage}`);
                 console.error('Erreur détaillée:', error);
