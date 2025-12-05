@@ -1,0 +1,236 @@
+---
+- name: Create AI Container
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    container_id: 30001
+    container_name: "ai-test"
+    container_memory: 4096
+    container_cores: 1
+    container_disk: 15
+    container_ip: "10.0.0.30/24"
+    container_gateway: "10.0.0.254"
+    container_dns: "1.1.1.1"
+    github_repo: "Bros-Insanity/nuit-info-2025"
+    github_branch: "ai_mail"
+
+  tasks:
+    - name: Check if container exists
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/lxc/{{ container_id }}/status/current"
+        method: GET
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
+        validate_certs: no
+        status_code: [200, 500]
+      register: container_check
+      ignore_errors: yes
+
+    - name: Stop existing container
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/lxc/{{ container_id }}/status/stop"
+        method: POST
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
+        validate_certs: no
+        status_code: [200, 202, 500]
+      when: container_check.status == 200
+      ignore_errors: yes
+
+    - name: Wait for container to stop
+      pause:
+        seconds: 5
+      when: container_check.status == 200
+
+    - name: Delete existing container
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/lxc/{{ container_id }}"
+        method: DELETE
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
+        validate_certs: no
+        status_code: [200, 202, 500]
+      when: container_check.status == 200
+      ignore_errors: yes
+
+    - name: Wait for container deletion
+      pause:
+        seconds: 5
+      when: container_check.status == 200
+
+    - name: Get current templates on storage
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/storage/local/content"
+        method: GET
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
+        validate_certs: no
+      register: current_templates
+
+    - name: Check if Debian standard template exists
+      set_fact:
+        debian_standard_exists: "{{ current_templates.json.data | selectattr('volid', 'search', 'debian-12-standard') | list | length > 0 }}"
+
+    - name: Download Debian 12 standard template
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/storage/local/download-url"
+        method: POST
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
+        body_format: form-urlencoded
+        body:
+          url: "http://download.proxmox.com/images/system/debian-12-standard_12.7-1_amd64.tar.zst"
+          content: "vztmpl"
+          filename: "debian-12-standard_12.7-1_amd64.tar.zst"
+        validate_certs: no
+        status_code: [200, 202]
+      register: download_template
+      when: not debian_standard_exists
+
+    - name: Wait for template download
+      pause:
+        seconds: 60
+      when: not debian_standard_exists
+
+    - name: Set template to use
+      set_fact:
+        existing_template:
+          volid: "local:vztmpl/debian-12-standard_12.7-1_amd64.tar.zst"
+
+    - name: Create LXC container with static IP
+      uri:
+        url: "https://{{ proxmox_api_host }}:8006/api2/json/nodes/{{ proxmox_node }}/lxc"
+        method: POST
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_user }}={{ proxmox_api_token_secret }}"
+        body_format: form-urlencoded
+        body:
+          vmid: "{{ container_id }}"
+          hostname: "{{ container_name }}"
+          ostemplate: "{{ existing_template.volid }}"
+          storage: "data"
+          memory: "{{ container_memory }}"
+          cores: "{{ container_cores }}"
+          rootfs: "data:{{ container_disk }}"
+          net0: "name=eth0,bridge=vmbr0,ip={{ container_ip }},gw={{ container_gateway }}"
+          nameserver: "{{ container_dns }}"
+          unprivileged: 1
+          start: 1
+        validate_certs: no
+        status_code: [200, 202]
+      register: create_result
+
+    - name: Wait for container to be ready
+      pause:
+        seconds: 30
+
+    - name: Create SSH key file from environment
+      copy:
+        content: |
+          {{ proxmox_ssh_private_key }}
+        dest: "/tmp/proxmox_ssh_key"
+        mode: '0600'
+      when: proxmox_ssh_private_key is defined
+      ignore_errors: yes
+      no_log: true
+
+    - name: Validate SSH key format
+      command: ssh-keygen -l -f /tmp/proxmox_ssh_key
+      register: key_validation
+      ignore_errors: yes
+      changed_when: false
+      when: proxmox_ssh_private_key is defined
+
+    - name: Show key validation result
+      debug:
+        msg: "Key validation: {{ key_validation.stdout if key_validation.rc == 0 else 'INVALID - ' + key_validation.stderr }}"
+      when: proxmox_ssh_private_key is defined
+
+    - name: Test SSH connection to Proxmox
+      shell: |
+        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} -o StrictHostKeyChecking=no -o ConnectTimeout=5 root@{{ proxmox_api_host }} "echo 'SSH OK'"
+      register: ssh_test
+      ignore_errors: yes
+      changed_when: false
+      when: proxmox_ssh_private_key is defined
+
+    - name: Show SSH test result
+      debug:
+        msg: "SSH test result: {{ ssh_test.stdout if (ssh_test.rc == 0 and proxmox_ssh_private_key is defined) else 'SSH key not configured or connection failed' }}"
+
+    - name: Install postfix, pip and git and imap via pct exec
+      shell: |
+        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@{{ proxmox_api_host }} "pct exec {{ container_id }} -- bash -c 'export DEBIAN_FRONTEND=noninteractive && echo \"postfix postfix/main_mailer_type select \\\"Internet Site\\\"\" | debconf-set-selections && echo \"postfix postfix/mailname string localhost\" | debconf-set-selections && apt-get update && apt-get install -y postfix && dpkg-reconfigure -f noninteractive postfix && service postfix start && apt install -y python3-pip dovecot-imapd git && sed -i \"s/^#mail_location = .*/mail_location = maildir:~\/Maildir/\" /etc/dovecot/conf.d/10-mail.conf && sed -i \"s/^#disable_plaintext_auth = yes/disable_plaintext_auth = no/\" /etc/dovecot/conf.d/10-auth.conf && sed -i \"s/^#auth_mechanisms = plain/auth_mechanisms = plain login/\" /etc/dovecot/conf.d/10-auth.conf && service dovecot restart'"
+      register: install_postfix
+      ignore_errors: yes
+      changed_when: install_postfix.rc == 0
+      when: proxmox_ssh_private_key is defined
+
+    - name: Set default branch
+      set_fact:
+        deploy_branch: "{{ github_branch | default('ai_mail') }}"
+
+    - name: Deploy public directory via git clone
+      shell: |
+        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@{{ proxmox_api_host }} "pct exec {{ container_id }} -- bash -c 'set -e && cd /tmp && rm -rf nuit-info-2025 && git clone --depth 1 --branch {{ deploy_branch }} https://github.com/{{ github_repo }}.git && mkdir /opt/ai_script && cp nuit-info-2025/ai_deployment/script.py /opt/ai_script/'"
+      register: deploy_files
+      ignore_errors: yes
+      changed_when: deploy_files.rc == 0
+      when: install_postfix.rc == 0 and proxmox_ssh_private_key is defined
+
+    - name: Verify deployed files
+      shell: |
+        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@{{ proxmox_api_host }} "pct exec {{ container_id }} -- bash -c 'echo \"=== Files in /opt/ai_script/ ===\" && ls -la /opt/ai_script/'"
+      register: verify_files
+      ignore_errors: yes
+      when: deploy_files.rc == 0 and proxmox_ssh_private_key is defined
+
+    - name: Show verification result
+      debug:
+        msg: "{{ verify_files.stdout if verify_files.rc == 0 else 'Verification failed' }}"
+      when: verify_files.rc == 0
+
+    - name: Enable and start postfix via pct exec
+      shell: |
+        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@{{ proxmox_api_host }} "pct exec {{ container_id }} -- systemctl enable --now postfix"
+      register: start_postfix
+      ignore_errors: yes
+      changed_when: start_postfix.rc == 0
+      when: install_postfix.rc == 0 and proxmox_ssh_private_key is defined
+
+    - name: Install pip dependencies
+      shell: |
+        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@{{ proxmox_api_host }} "pct exec {{ container_id }} -- bash -c 'pip install torch transformers accelerate --break-system-packages'"
+      register: pip_install
+      ignore_errors: yes
+      changed_when: start_postfix.rc == 0
+      when: verify_files.rc == 0 and proxmox_ssh_private_key is defined
+
+    - name: Créer le fichier .env
+      shell: |
+        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@{{ proxmox_api_host }} "pct exec {{ container_id }} -- bash -c 'ENV_FILE=\"/opt/ai_script/.env\"; echo \"IMAP_SERVER=\\\"{{ imap_server }}\\\"\" > \"\$ENV_FILE\" && echo \"IMAP_USER=\\\"{{ imap_user }}\\\"\" >> \"\$ENV_FILE\" && echo \"IMAP_PASS=\\\"{{ imap_pass }}\\\"\" >> \"\$ENV_FILE\" && echo \"IMAP_MAILBOX=\\\"{{ imap_mailbox | default('INBOX') }}\\\"\" >> \"\$ENV_FILE\" && echo \"SMTP_SERVER=\\\"{{ smtp_server }}\\\"\" >> \"\$ENV_FILE\" && echo \"SMTP_USER=\\\"{{ smtp_user }}\\\"\" >> \"\$ENV_FILE\" && echo \"SMTP_PASS=\\\"{{ smtp_pass }}\\\"\" >> \"\$ENV_FILE\" && echo \"SMTP_PORT=\\\"{{ smtp_port | default(587) }}\\\"\" >> \"\$ENV_FILE\" && echo \"FROM_EMAIL=\\\"{{ from_email }}\\\"\" >> \"\$ENV_FILE\"'"
+      register: create_env_file_oneline
+      when: verify_files.rc == 0
+
+    - name: Démarrer le script
+      shell: |
+        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@{{ proxmox_api_host }} "pct exec {{ container_id }} -- bash -c 'python3 /opt/ai_script/script.py'"
+      register: start_script
+      when: verify_files.rc == 0 and create_env_file_oneline.rc == 0
+
+
+    - name: Show result
+      debug:
+        msg: |
+          Container {{ container_id }} ({{ container_name }}) cree avec succes!
+          IP: {{ container_ip }}
+          Gateway: {{ container_gateway }}
+          DNS: {{ container_dns }}
+          Web: http://10.0.0.20/
+          {% if install_postfix.rc == 0 %}
+          Postfi installe et site web deploye avec succes!
+          {% else %}
+          Note: Installation nginx necessite un acces SSH au serveur Proxmox ({{ proxmox_api_host }})
+          {% endif %}
