@@ -201,47 +201,16 @@
         msg: "{{ verify_files.stdout if (verify_files is defined and verify_files.rc is defined and verify_files.rc == 0) else 'Verification failed or skipped' }}"
       when: verify_files is defined and verify_files.rc is defined and verify_files.rc == 0
 
-    - name: Créer la configuration nginx dans le container
+    - name: Configurer et démarrer nginx
       shell: |
         ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} \
             -o StrictHostKeyChecking=no \
             -o ConnectTimeout=10 \
             root@{{ proxmox_api_host }} \
-            "pct exec {{ container_id }} -- bash -c 'printf \"server {\\n    listen 80 default_server;\\n    listen [::]:80 default_server;\\n    root /var/www/html;\\n    index index.html;\\n    server_name _;\\n    location / {\\n        try_files \\\\\$uri \\\\\$uri/ =404;\\n    }\\n    location /api/winux {\\n        proxy_pass http://localhost:5000;\\n        proxy_set_header Host \\\\\$host;\\n        proxy_set_header X-Real-IP \\\\\$remote_addr;\\n        proxy_set_header X-Forwarded-For \\\\\$proxy_add_x_forwarded_for;\\n        proxy_set_header X-Forwarded-Proto \\\\\$scheme;\\n        proxy_connect_timeout 60s;\\n        proxy_send_timeout 60s;\\n        proxy_read_timeout 60s;\\n    }\\n    location /winux {\\n        alias /var/www/html/winux;\\n        try_files \\\\\$uri \\\\\$uri/ /winux/index.html;\\n    }\\n}\" > /etc/nginx/sites-available/default'"
-      register: create_nginx_config
+            "pct exec {{ container_id }} -- bash -c 'printf \"server {\\n    listen 80 default_server;\\n    listen [::]:80 default_server;\\n    root /var/www/html;\\n    index index.html;\\n    server_name _;\\n    location / {\\n        try_files \\\\\$uri \\\\\$uri/ =404;\\n    }\\n    location /api/winux {\\n        proxy_pass http://localhost:5000;\\n        proxy_set_header Host \\\\\$host;\\n        proxy_set_header X-Real-IP \\\\\$remote_addr;\\n        proxy_set_header X-Forwarded-For \\\\\$proxy_add_x_forwarded_for;\\n        proxy_set_header X-Forwarded-Proto \\\\\$scheme;\\n        proxy_connect_timeout 60s;\\n        proxy_send_timeout 60s;\\n        proxy_read_timeout 60s;\\n    }\\n    location /winux {\\n        alias /var/www/html/winux;\\n        try_files \\\\\$uri \\\\\$uri/ /winux/index.html;\\n    }\\n}\" > /etc/nginx/sites-available/default && rm -f /etc/nginx/sites-enabled/default && ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default && systemctl enable --now nginx'"
+      register: configure_nginx
       ignore_errors: yes
-      changed_when: create_nginx_config.rc == 0
-      when: install_nginx.rc == 0 and proxmox_ssh_private_key is defined
-
-    - name: Activer le site nginx
-      shell: |
-        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} \
-            -o StrictHostKeyChecking=no \
-            -o ConnectTimeout=10 \
-            root@{{ proxmox_api_host }} \
-            "pct exec {{ container_id }} -- bash -c 'rm -f /etc/nginx/sites-enabled/default && ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default'"
-      register: enable_nginx_site
-      ignore_errors: yes
-      changed_when: enable_nginx_site.rc == 0
-      when: create_nginx_config.rc == 0 and proxmox_ssh_private_key is defined
-
-    - name: Tester la configuration nginx
-      shell: |
-        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} \
-            -o StrictHostKeyChecking=no \
-            -o ConnectTimeout=10 \
-            root@{{ proxmox_api_host }} \
-            "pct exec {{ container_id }} -- nginx -t"
-      register: nginx_test
-      ignore_errors: yes
-      when: configure_nginx.rc == 0 and proxmox_ssh_private_key is defined
-
-    - name: Enable and start nginx via pct exec
-      shell: |
-        ssh -i {{ proxmox_ssh_key_path | default('/tmp/proxmox_ssh_key') }} -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@{{ proxmox_api_host }} "pct exec {{ container_id }} -- systemctl enable --now nginx"
-      register: start_nginx
-      ignore_errors: yes
-      changed_when: start_nginx.rc == 0
+      changed_when: configure_nginx.rc == 0
       when: install_nginx.rc == 0 and proxmox_ssh_private_key is defined
 
     - name: Installer Python3 et pip dans le container
