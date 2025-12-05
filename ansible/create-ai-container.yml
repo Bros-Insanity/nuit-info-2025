@@ -7,7 +7,7 @@
   vars:
     container_id: 30001
     container_name: "ai-test"
-    container_memory: 512
+    container_memory: 4096
     container_cores: 1
     container_disk: 8
     container_ip: "10.0.0.30/24"
